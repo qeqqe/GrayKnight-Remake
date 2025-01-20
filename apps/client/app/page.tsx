@@ -1,3 +1,5 @@
+"use client";
+import { handleSpotifyLogin } from "@/lib/utils";
 import { Music2, History, BarChart3, Music } from "lucide-react";
 
 export default function WelcomePage() {
@@ -34,10 +36,13 @@ export default function WelcomePage() {
 
           <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
             Your noble companion in the realm of music analytics. Track,
-            analyze, and master your Spotify kingdom with royal precision.
+            analyze, and visualize your listening habits in detail.
           </p>
 
-          <button className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-medium text-lg hover:scale-105 transition-all duration-200 shadow-xl shadow-emerald-500/20">
+          <button
+            onClick={handleSpotifyLogin}
+            className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-medium text-lg hover:scale-105 transition-all duration-200 shadow-xl shadow-emerald-500/20"
+          >
             <div className="absolute inset-0 rounded-full bg-white/20 blur-xl group-hover:blur-2xl transition-all duration-200" />
             <span className="relative flex items-center justify-center gap-2">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
@@ -133,7 +138,10 @@ export default function WelcomePage() {
             Your data is securely encrypted and never shared
           </p>
           <div className="inline-flex gap-1 text-xs text-gray-500">
-            Made By <a href="https://github.com/qeqqe">qeqqe</a>
+            Made By{" "}
+            <a href="https://github.com/qeqqe" target="_blank">
+              qeqqe
+            </a>
             <span className="text-emerald-400">♥</span> for music lovers
           </div>
         </div>
