@@ -15,23 +15,18 @@ export class AuthController {
   @Get('spotify')
   @UseGuards(SpotifyAuthGuard)
   async spotifyAuth() {
-    // handled by guard
+    // Handled by guard
   }
 
   @Get('spotify/callback')
   @UseGuards(SpotifyAuthGuard)
   async spotifyAuthCallback(@Req() req, @Res() res: Response) {
     const user = await this.authService.validateUser(req.user);
-    const token = await this.authService.generateToken(user);
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const token = this.authService.generateToken(user);
 
-    console.log('Generated token:', token);
-    console.log(
-      'Redirecting to:',
-      `${frontendUrl}/auth/callback?token=${token}`,
+    res.redirect(
+      `${this.configService.get('FRONTEND_URL')}/auth/callback?token=${token}`,
     );
-
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
   }
 
   @Get('me')
