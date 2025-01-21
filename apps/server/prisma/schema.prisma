@@ -14,10 +14,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @unique @default(cuid())
-  spotifyId String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  spotifyId    String   @unique
+  email        String   @unique
+  displayName  String?
+  profileUrl   String?
+  accessToken  String
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  @@index([spotifyId])
+  @@index([spotifyId, id, email])
 }

@@ -11,22 +11,29 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
       clientSecret: configService.get('SPOTIFY_CLIENT_SECRET'),
       callbackURL: configService.get('SPOTIFY_CALLBACK_URL'),
       scope: [
-        'user-read-private',
         'user-read-email',
+        'user-read-private',
         'user-read-playback-state',
         'user-modify-playback-state',
+        'user-read-currently-playing',
         'user-read-recently-played',
         'user-top-read',
       ],
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: any) {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: any,
+  ): Promise<any> {
     return {
       spotifyId: profile.id,
       email: profile.emails[0].value,
+      displayName: profile.displayName,
       accessToken,
       refreshToken,
+      profileUrl: profile.profileUrl,
     };
   }
 }

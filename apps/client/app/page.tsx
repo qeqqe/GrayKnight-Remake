@@ -1,5 +1,4 @@
 "use client";
-import { handleSpotifyLogin } from "@/lib/utils";
 import { Music2, History, BarChart3, Music } from "lucide-react";
 
 export default function WelcomePage() {
@@ -40,7 +39,16 @@ export default function WelcomePage() {
           </p>
 
           <button
-            onClick={handleSpotifyLogin}
+            onClick={() => {
+              const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+              if (!backendUrl) {
+                console.error(
+                  "Backend URL is not defined in environment variables"
+                );
+                return;
+              }
+              window.location.href = `${backendUrl}/auth/spotify`;
+            }}
             className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-medium text-lg hover:scale-105 transition-all duration-200 shadow-xl shadow-emerald-500/20"
           >
             <div className="absolute inset-0 rounded-full bg-white/20 blur-xl group-hover:blur-2xl transition-all duration-200" />
