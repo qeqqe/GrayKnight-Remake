@@ -10,7 +10,7 @@ import {
   History,
   Search,
 } from "lucide-react";
-import Image from "next/image";
+// import Image from "next/image";
 
 interface SpotifyUser {
   id: string;
@@ -40,6 +40,7 @@ const dummyRecentTracks: Track[] = [
 const Page = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("overview");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [user, setUser] = useState<SpotifyUser>({
     id: "",
     spotifyId: "",
@@ -49,25 +50,36 @@ const Page = () => {
   });
 
   useEffect(() => {
-    const fetchUserDetail = async () => {
+    const fetchUserData = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
         router.push("/");
-        throw new Error("Token not found");
+        return;
       }
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/me`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user data");
         }
-      );
-      const data = await response.json();
-      setUser(data);
+
+        const userData = await response.json();
+        setUser(userData);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        router.push("/");
+      }
     };
 
-    fetchUserDetail();
+    fetchUserData();
   }, [router]);
 
   return (
@@ -84,7 +96,7 @@ const Page = () => {
             <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 p-[2px] flex-shrink-0">
-                  <Image
+                  {/* <Image
                     src={user.profileUrl}
                     alt={user.displayName}
                     width={48}
@@ -93,7 +105,7 @@ const Page = () => {
                     onError={(e) => {
                       e.currentTarget.src = "/default-avatar.png";
                     }}
-                  />
+                  /> */}
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base md:text-lg font-semibold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent truncate">
