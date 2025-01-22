@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -32,23 +32,35 @@ export class AuthService {
   }
 
   async generateToken(user: Prisma.UserCreateInput) {
-    return this.jwtService.sign({
-      sub: user.id,
+    const payload = {
+      id: user.id,
       spotifyId: user.spotifyId,
-    });
+      email: user.email,
+    };
+    return this.jwtService.signAsync(payload);
   }
 
   async getUserProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        spotifyId: true,
-        email: true,
-        displayName: true,
-        profileUrl: true,
-      },
-    });
-    return user;
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          spotifyId: true,
+          email: true,
+          displayName: true,
+          profileUrl: true,
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      return user;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
   }
 }

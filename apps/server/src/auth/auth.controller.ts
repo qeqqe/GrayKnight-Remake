@@ -22,7 +22,7 @@ export class AuthController {
   @UseGuards(SpotifyAuthGuard)
   async spotifyAuthCallback(@Req() req, @Res() res: Response) {
     const user = await this.authService.validateUser(req.user);
-    const token = this.authService.generateToken(user);
+    const token = await this.authService.generateToken(user);
 
     res.redirect(
       `${this.configService.get('FRONTEND_URL')}/auth/callback?token=${token}`,
@@ -32,6 +32,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req) {
-    return this.authService.getUserProfile(req.user.sub);
+    return this.authService.getUserProfile(req.user.id); // Changed from req.user.sub
   }
 }

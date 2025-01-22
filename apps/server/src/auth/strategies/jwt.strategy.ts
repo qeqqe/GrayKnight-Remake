@@ -12,10 +12,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       secretOrKey: configService.get<string>('JWT_SECRET'),
     });
   }
-  async validate(payload: { id: string; email: string; username: string }) {
+  async validate(payload: any) {
     if (!payload) {
       throw new UnauthorizedException();
     }
-    return { id: payload.id, email: payload.email, username: payload.username };
+    return {
+      id: payload.id,
+      spotifyId: payload.spotifyId,
+      email: payload.email,
+    };
   }
 }
