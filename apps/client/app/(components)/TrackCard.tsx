@@ -20,6 +20,9 @@ import {
   pauseSpotifyTrack,
   nextSpotifyTrack,
   previousSpotifyTrack,
+  checkIfTrackIsSaved,
+  removeTrackFromLibrary,
+  saveTrackToLibrary,
 } from "@/lib/spotify/spotify";
 import { Play, Pause, SkipBack, SkipForward, Info, Heart } from "lucide-react";
 import Image from "next/image";
@@ -190,20 +193,22 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     }
   }, [track.artists]);
 
-  const handleSaveTrack = () => {};
-
-  const checkIfTrackIsSaved = useCallback(async () => {
+  const handleSaveTrack = async () => {
     try {
-      const token = localStorage.getItem("spotify_access_token");
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/tracks/contains?ids=${track.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const [saved] = await response.json();
+      if (isSaved) {
+        await removeTrackFromLibrary(track.id);
+      } else {
+        await saveTrackToLibrary(track.id);
+      }
+      await checkIfTrackIsSavedStatus();
+    } catch (error) {
+      console.error("Failed to toggle track saved status:", error);
+    }
+  };
+
+  const checkIfTrackIsSavedStatus = useCallback(async () => {
+    try {
+      const [saved] = await checkIfTrackIsSaved(track.id);
       setIsSaved(saved);
     } catch (error) {
       console.error("Failed to check track saved status:", error);
@@ -221,8 +226,8 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   }, [track.is_playing]);
 
   useEffect(() => {
-    checkIfTrackIsSaved();
-  }, [track.id, checkIfTrackIsSaved]);
+    checkIfTrackIsSavedStatus();
+  }, [track.id, checkIfTrackIsSavedStatus]);
 
   return (
     <div className="h-full flex flex-col">

@@ -16,6 +16,10 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
         'user-read-recently-played',
         'user-top-read',
         'user-read-currently-playing',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+        'user-library-read',
+        'user-library-modify',
       ],
     });
   }

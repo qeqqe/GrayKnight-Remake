@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   Param,
+  Delete,
 } from '@nestjs/common';
 import { SpotifyService } from './spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
@@ -105,5 +106,52 @@ export class SpotifyController {
   @UseGuards(JwtAuthGuard)
   async getArtistDetails(@Req() req, @Param('artistId') artistId: string) {
     return this.spotifyService.getArtistDetails(req.user.id, artistId);
+  }
+
+  @Get('available-devices')
+  @UseGuards(JwtAuthGuard)
+  async getAvailableDevices(@Req() req) {
+    return this.spotifyService.getAvailableDevices(req.user.id);
+  }
+
+  @Put('transfer-playback')
+  @UseGuards(JwtAuthGuard)
+  async transferPlayback(@Req() req, @Body() body: { deviceId: string }) {
+    const result = await this.spotifyService.transferPlayback(
+      req.user.id,
+      body.deviceId,
+    );
+    return result;
+  }
+
+  @Put('adjust-volume')
+  @UseGuards(JwtAuthGuard)
+  async adjustVolume(
+    @Req() req,
+    @Body() body: { deviceId: string; volume: number },
+  ) {
+    return this.spotifyService.adjustVolume(
+      req.user.id,
+      body.deviceId,
+      body.volume,
+    );
+  }
+
+  @Get('check-track-saved/:trackId')
+  @UseGuards(JwtAuthGuard)
+  async checkTrackSaved(@Req() req, @Param('trackId') trackId: string) {
+    return this.spotifyService.checkTrackSaved(req.user.id, trackId);
+  }
+
+  @Delete('remove-from-library/:trackId')
+  @UseGuards(JwtAuthGuard)
+  async removeFromLibrary(@Req() req, @Param('trackId') trackId: string) {
+    return this.spotifyService.removeFromLibrary(req.user.id, trackId);
+  }
+
+  @Put('save-to-library/:trackId')
+  @UseGuards(JwtAuthGuard)
+  async saveToLibrary(@Req() req, @Param('trackId') trackId: string) {
+    return this.spotifyService.saveToLibrary(req.user.id, trackId);
   }
 }

@@ -296,4 +296,169 @@ export class SpotifyService {
       throw error;
     }
   }
+
+  async getAvailableDevices(userId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        'https://api.spotify.com/v1/me/player/devices',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to fetch available devices');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching available devices:', error);
+      throw error;
+    }
+  }
+
+  async transferPlayback(userId: string, deviceId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch('https://api.spotify.com/v1/me/player', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_ids: [deviceId],
+          play: true, // this ensures playback continues on the new device
+        }),
+      });
+
+      if (response.status !== 204) {
+        throw new UnauthorizedException('Failed to transfer playback');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error transferring playback:', error);
+      throw error;
+    }
+  }
+
+  async adjustVolume(userId: string, deviceId: string, volume: number) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/volume?volume_percent=${volume}&device_id=${deviceId}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to adjust volume');
+      }
+
+      // update device volume in db
+      await this.prisma.listeningSession.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          availableDevices: {
+            set: [],
+          },
+        },
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Error adjusting volume:', error);
+      throw error;
+    }
+  }
+
+  async checkTrackSaved(userId: string, trackId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to check if track is saved');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error checking if track is saved:', error);
+      throw error;
+    }
+  }
+
+  async removeFromLibrary(userId: string, trackId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ids: [trackId] }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to remove track from library');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing track from library:', error);
+      throw error;
+    }
+  }
+
+  async saveToLibrary(userId: string, trackId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ids: [trackId] }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to save track to library');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error saving track to library:', error);
+      throw error;
+    }
+  }
 }

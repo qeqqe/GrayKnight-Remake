@@ -247,3 +247,80 @@ export const fetchTopItems = async (
     throw error;
   }
 };
+
+export const checkIfTrackIsSaved = async (trackId: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/check-track-saved/${trackId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to check track saved status");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error checking if track is saved:", error);
+    throw error;
+  }
+};
+
+export const removeTrackFromLibrary = async (trackId: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/remove-from-library/${trackId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to remove track from library");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error removing track from library:", error);
+    throw error;
+  }
+};
+
+export const saveTrackToLibrary = async (trackId: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/save-to-library/${trackId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to save track to library");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error saving track to library:", error);
+    throw error;
+  }
+};
