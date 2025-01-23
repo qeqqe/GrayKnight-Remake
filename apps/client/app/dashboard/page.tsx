@@ -240,7 +240,9 @@ const Page = () => {
             <TabsContent value="devices" className="mt-0">
               <Card className="bg-white/[0.03] border-white/10">
                 <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold mb-4">Available Devices</h2>
+                  <h2 className="text-2xl font-bold mb-4 text-zinc-300">
+                    Available Devices
+                  </h2>
                   <AvailableDevices />
                 </CardContent>
               </Card>
