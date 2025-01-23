@@ -233,7 +233,7 @@ const Page = () => {
               <Card className="bg-white/[0.03] border-white/10">
                 <CardContent className="p-6">
                   <h2 className="text-2xl font-bold mb-4">Library</h2>
-                  {/* Library content */}
+                  {/* library content */}
                 </CardContent>
               </Card>
             </TabsContent>
