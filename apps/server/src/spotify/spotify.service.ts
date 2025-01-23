@@ -126,13 +126,8 @@ export class SpotifyService {
     body: {
       endpoint: string;
       body: {
-        context_uri?: string;
         uris?: string[];
         position_ms?: number;
-        offset?: {
-          uri?: string;
-          position?: number;
-        };
       };
     },
   ) {
@@ -149,10 +144,13 @@ export class SpotifyService {
       });
 
       if (!response.ok) {
-        throw new UnauthorizedException('Failed to play track');
+        const errorData = await response.json();
+        throw new UnauthorizedException(
+          errorData.error?.message || 'Failed to play track',
+        );
       }
 
-      return response;
+      return response.ok;
     } catch (error) {
       console.error('Error playing track:', error);
       throw error;
@@ -271,6 +269,30 @@ export class SpotifyService {
       return response;
     } catch (error) {
       console.error('Error fetching top items:', error);
+      throw error;
+    }
+  }
+
+  async getArtistDetails(userId: string, artistId: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/artists/${artistId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to fetch artist details');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching artist details:', error);
       throw error;
     }
   }

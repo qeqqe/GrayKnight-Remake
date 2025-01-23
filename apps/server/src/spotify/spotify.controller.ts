@@ -6,6 +6,7 @@ import {
   Put,
   Req,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { SpotifyService } from './spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
@@ -45,7 +46,7 @@ export class SpotifyController {
     return this.spotifyService.addToQueue(req.user.id, endpoint);
   }
 
-  @Post('play-spotify-track')
+  @Put('play-spotify-track')
   @UseGuards(JwtAuthGuard)
   async playTrack(
     @Req() req,
@@ -53,13 +54,8 @@ export class SpotifyController {
     body: {
       endpoint: string;
       body: {
-        context_uri?: string;
         uris?: string[];
         position_ms?: number;
-        offset?: {
-          uri?: string;
-          position?: number;
-        };
       };
     },
   ) {
@@ -103,5 +99,11 @@ export class SpotifyController {
   async fetchTopItems(@Req() req) {
     const { type, time } = req.query;
     return this.spotifyService.fetchTopItems(req.user.id, type, time);
+  }
+
+  @Get('artists/:artistId')
+  @UseGuards(JwtAuthGuard)
+  async getArtistDetails(@Req() req, @Param('artistId') artistId: string) {
+    return this.spotifyService.getArtistDetails(req.user.id, artistId);
   }
 }

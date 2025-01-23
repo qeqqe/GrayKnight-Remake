@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { Layout, Library, History, Search } from "lucide-react";
+import { Layout, Library, History, Search, Smartphone } from "lucide-react";
 import Image from "next/image";
 import { spotifyTrack } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Overview } from "@/components/dashboard/Overview";
+import AvailableDevices from "../(components)/AvailableDevices";
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg";
 
@@ -30,6 +31,7 @@ const Page = () => {
     displayName: "",
     profileUrl: "",
   });
+  const [activeTab, setActiveTab] = useState("overview");
 
   const currentPlaying = useCallback(async () => {
     try {
@@ -170,8 +172,8 @@ const Page = () => {
 
             <ScrollArea className="h-[calc(100vh-200px)]">
               <Tabs
-                defaultValue="overview"
-                orientation="vertical"
+                value={activeTab}
+                onValueChange={setActiveTab}
                 className="w-full"
               >
                 <TabsList className="flex flex-col w-full space-y-1 bg-transparent">
@@ -185,6 +187,11 @@ const Page = () => {
                       value: "library",
                       icon: <Library className="w-4 h-4" />,
                       label: "Library",
+                    },
+                    {
+                      value: "devices",
+                      icon: <Smartphone className="w-4 h-4" />,
+                      label: "Devices",
                     },
                     {
                       value: "history",
@@ -214,7 +221,11 @@ const Page = () => {
         </Card>
 
         <main className="flex-1 p-4 md:p-8">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsContent value="overview" className="mt-0 space-y-4">
               <Overview currentTrack={currentTrack} />
             </TabsContent>
@@ -223,6 +234,14 @@ const Page = () => {
                 <CardContent className="p-6">
                   <h2 className="text-2xl font-bold mb-4">Library</h2>
                   {/* Library content */}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="devices" className="mt-0">
+              <Card className="bg-white/[0.03] border-white/10">
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-bold mb-4">Available Devices</h2>
+                  <AvailableDevices />
                 </CardContent>
               </Card>
             </TabsContent>

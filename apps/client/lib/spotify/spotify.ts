@@ -18,12 +18,10 @@ export async function playSpotifyTrack(options: {
     options.deviceId ? `?device_id=${options.deviceId}` : ""
   }`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const body: any = {};
-  if (options.context_uri) body.context_uri = options.context_uri;
-  if (options.uris) body.uris = options.uris;
-  if (options.position_ms) body.position_ms = options.position_ms;
-  if (options.offset) body.offset = options.offset;
+  const body = {
+    uris: options.uris,
+    position_ms: options.position_ms,
+  };
 
   try {
     const response = await fetch(
@@ -42,8 +40,7 @@ export async function playSpotifyTrack(options: {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error.message || "Failed to play track");
+      throw new Error("Failed to play track");
     }
   } catch (error) {
     console.error("Failed to play track:", error);

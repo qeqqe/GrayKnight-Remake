@@ -35,21 +35,84 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const [localPlayingState, setLocalPlayingState] = useState(track.is_playing);
   const [artistDetails, setArtistDetails] = useState<ArtistDetails[]>([]);
   const [isSaved, setIsSaved] = useState(false);
-  const formattedDuration = `${Math.floor(track.duration_ms / 60000)}:${(
-    (track.duration_ms % 60000) /
-    1000
-  )
-    .toFixed(0)
-    .padStart(2, "0")}`;
+  const [currentProgress, setCurrentProgress] = useState(track.progress_ms);
 
-  const formattedProgress = `${Math.floor(track.progress_ms / 60000)}:${(
-    (track.progress_ms % 60000) /
-    1000
-  )
-    .toFixed(0)
-    .padStart(2, "0")}`;
+  const formatTime = (ms: number) => {
+    return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
+      .toFixed(0)
+      .padStart(2, "0")}`;
+  };
 
-  const progressPercentage = (track.progress_ms / track.duration_ms) * 100;
+  // update progress timer
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (localPlayingState && currentProgress < track.duration_ms) {
+      intervalId = setInterval(() => {
+        setCurrentProgress((prev) => {
+          if (prev >= track.duration_ms) {
+            clearInterval(intervalId);
+            return track.duration_ms;
+          }
+          return prev + 1000;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [localPlayingState, track.duration_ms, currentProgress]);
+
+  // Add new useEffect for handling track end
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (currentProgress >= track.duration_ms) {
+      // Wait for 2.5 seconds after track ends before fetching new state
+      timeoutId = setTimeout(async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/current-playing`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.item) {
+              // Update local playing state based on new track data
+              setLocalPlayingState(data.is_playing);
+              setCurrentProgress(data.progress_ms || 0);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch next track:", error);
+        }
+      }, 2500); // 2.5 seconds delay
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [currentProgress, track.duration_ms]);
+
+  // sync with incoming track updates
+  useEffect(() => {
+    setCurrentProgress(track.progress_ms);
+  }, [track.progress_ms]);
+
+  const formattedProgress = formatTime(currentProgress);
+  const formattedDuration = formatTime(track.duration_ms);
+  const progressPercentage = (currentProgress / track.duration_ms) * 100;
 
   const formattedDate = track.album.release_date
     ? format(new Date(track.album.release_date), "dd/MM/yyyy")
@@ -61,19 +124,18 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     e.preventDefault();
     e.stopPropagation();
 
-    setLocalPlayingState(!localPlayingState);
-
     try {
       if (localPlayingState) {
         await pauseSpotifyTrack();
+        setLocalPlayingState(false);
       } else {
         await playSpotifyTrack({
           uris: [`spotify:track:${track.id}`],
-          position_ms: track.progress_ms,
+          position_ms: currentProgress,
         });
+        setLocalPlayingState(true);
       }
     } catch (error) {
-      setLocalPlayingState(localPlayingState);
       console.error("Failed to control playback:", error);
     }
   };
@@ -101,13 +163,6 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const fetchArtistDetails = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      //   const artistPromises = track.artists.map((artist) =>
-      //     fetch(`https://api.spotify.com/v1/artists/${artist.id}`, {
-      //       headers: {
-      //         Authorization: `Bearer ${token}`,
-      //       },
-      //     }).then((res) => res.json())
-      //   );
       const artistPromises = track.artists.map((artist) =>
         fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/artists/${artist.id}`,
@@ -116,15 +171,18 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
               Authorization: `Bearer ${token}`,
             },
           }
-        ).then((res) => res.json())
+        ).then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch artist details");
+          return res.json();
+        })
       );
 
       const artistsData = await Promise.all(artistPromises);
       setArtistDetails(
-        artistsData.map((artist) => ({
-          id: artist.id,
-          name: artist.name,
-          genres: artist.genres,
+        artistsData.map((artistData) => ({
+          id: artistData.id,
+          name: artistData.name,
+          genres: artistData.genres || [],
         }))
       );
     } catch (error) {
@@ -227,7 +285,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
             </div>
           </div>
 
-          {/* Playback Controls */}
+          {/* playback controls */}
           <div className="flex items-center gap-3">
             <Button
               size="sm"
@@ -260,7 +318,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* progress bar */}
       <div className="mt-6 space-y-1">
         <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
@@ -399,7 +457,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
                 </div>
               </div>
 
-              {/* Preview section */}
+              {/* preview section */}
               {track.preview_url && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
