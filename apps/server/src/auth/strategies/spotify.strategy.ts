@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
-  constructor(configService: ConfigService) {
+  constructor(private configService: ConfigService) {
     super({
       clientID: configService.get('SPOTIFY_CLIENT_ID'),
       clientSecret: configService.get('SPOTIFY_CLIENT_SECRET'),
@@ -13,11 +13,9 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
       scope: [
         'user-read-email',
         'user-read-private',
-        'user-read-playback-state',
-        'user-modify-playback-state',
-        'user-read-currently-playing',
         'user-read-recently-played',
         'user-top-read',
+        'user-read-currently-playing',
       ],
     });
   }
@@ -33,7 +31,7 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
       displayName: profile.displayName,
       accessToken,
       refreshToken,
-      profileUrl: profile.profileUrl,
+      profileUrl: profile.photos[0]?.value,
     };
   }
 }

@@ -14,15 +14,166 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  spotifyId    String   @unique
-  email        String   @unique
-  displayName  String?
-  profileUrl   String?
+  id          String  @id @default(cuid())
+  spotifyId   String  @unique
+  email       String  @unique
+  displayName String?
+  profileUrl  String?
+  country     String?
+
+  // authentication & tokens
   accessToken  String
   refreshToken String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  tokenExpiry  DateTime?
 
-  @@index([spotifyId, id, email])
+  // relationships
+  tracks    UserTrack[]
+  playlists UserPlaylist[]
+  artists   UserArtist[]
+  genres    UserGenre[]
+  listening ListeningSession[]
+  insights  UserInsight[]
+
+  // timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// track listening history
+model UserTrack {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  trackSpotifyId String
+  name           String
+  artist         String
+  album          String
+  duration       Int // in milliseconds
+  playedAt       DateTime
+
+  // advanced tracking
+  playCount       Int @default(1)
+  totalListenTime Int @default(0)
+  skipCount       Int @default(0)
+
+  @@unique([userId, trackSpotifyId, playedAt])
+}
+
+// playlist tracking
+model UserPlaylist {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  spotifyId   String  @unique
+  name        String
+  description String?
+  totalTracks Int
+
+  tracks PlaylistTrack[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// artist listening stats
+model UserArtist {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  spotifyId String
+  name      String
+
+  totalPlayTime Int       @default(0)
+  playCount     Int       @default(0)
+  firstListen   DateTime?
+  lastListen    DateTime?
+
+  genres String[]
+
+  @@unique([userId, spotifyId])
+}
+
+// genre tracking
+model UserGenre {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  name          String
+  totalPlayTime Int    @default(0)
+  playCount     Int    @default(0)
+
+  @@unique([userId, name])
+}
+
+// detailed listening sessions
+model ListeningSession {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int // in seconds
+
+  device           String? // "Smartphone", "Desktop"
+  availableDevices String[]
+  context          String? // "Playlist", "Album"
+
+  tracks SessionTrack[]
+}
+
+// tracks within a listening session
+model SessionTrack {
+  id        String           @id @default(cuid())
+  session   ListeningSession @relation(fields: [sessionId], references: [id])
+  sessionId String
+
+  trackSpotifyId String
+  name           String
+  artist         String
+  playedAt       DateTime
+  duration       Int
+}
+
+// playlist Tracks
+model PlaylistTrack {
+  id         String       @id @default(cuid())
+  playlist   UserPlaylist @relation(fields: [playlistId], references: [id])
+  playlistId String
+
+  trackSpotifyId String
+  name           String
+  artist         String
+  addedAt        DateTime
+}
+
+// user insights & analytics
+model UserInsight {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // daily/weekly/monthly summaries
+  period      String // "daily", "weekly", "monthly"
+  periodStart DateTime
+
+  // listening stats
+  totalListenTime   Int
+  uniqueTrackCount  Int
+  uniqueArtistCount Int
+
+  // top data
+  topGenres  Json
+  topArtists Json
+  topTracks  Json
+
+  // mood & energy analysis
+  averageTrackEnergy  Float?
+  averageTrackValence Float?
+
+  @@unique([userId, period, periodStart])
 }

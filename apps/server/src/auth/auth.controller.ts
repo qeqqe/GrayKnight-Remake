@@ -3,7 +3,6 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { SpotifyAuthGuard } from './guards/spotify-auth.guard';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './strategies/jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -21,17 +20,20 @@ export class AuthController {
   @Get('spotify/callback')
   @UseGuards(SpotifyAuthGuard)
   async spotifyAuthCallback(@Req() req, @Res() res: Response) {
-    const user = await this.authService.validateUser(req.user);
-    const token = await this.authService.generateToken(user);
+    try {
+      const user = await this.authService.validateUser(req.user);
+      const token = await this.authService.generateToken(user);
 
-    res.redirect(
-      `${this.configService.get('FRONTEND_URL')}/auth/callback?token=${token}`,
-    );
-  }
+      // Add token expiry time to URL for client-side validation
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+      const expiryDate = Date.now() + expiresIn;
 
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  async getProfile(@Req() req) {
-    return this.authService.getUserProfile(req.user.id); // Changed from req.user.sub
+      res.redirect(
+        `${this.configService.get('FRONTEND_URL')}/auth/callback?token=${token}&expires=${expiryDate}`,
+      );
+    } catch (error) {
+      console.error('Auth callback error:', error);
+      res.redirect(`${this.configService.get('FRONTEND_URL')}/error`);
+    }
   }
 }
