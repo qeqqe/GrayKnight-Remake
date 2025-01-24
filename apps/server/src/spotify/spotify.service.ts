@@ -145,7 +145,24 @@ export class SpotifyService {
     try {
       const accessToken = await this.authService.refreshToken(userId);
 
-      const response = await fetch(body.endpoint, {
+      // First, check for available devices
+      const devices = await this.getAvailableDevices(userId);
+      if (!devices.devices || devices.devices.length === 0) {
+        throw new UnauthorizedException(
+          'No available devices found. Please open Spotify on any device.',
+        );
+      }
+
+      // Find active device or use the first available one
+      const targetDevice =
+        devices.devices.find((d) => d.is_active) || devices.devices[0];
+
+      // Add device_id to endpoint if not present
+      const endpoint = body.endpoint.includes('?')
+        ? `${body.endpoint}&device_id=${targetDevice.id}`
+        : `${body.endpoint}?device_id=${targetDevice.id}`;
+
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -498,6 +515,51 @@ export class SpotifyService {
       return { success: true };
     } catch (error) {
       console.error('Error seeking track:', error);
+      throw error;
+    }
+  }
+
+  async setRepeatMode(
+    userId: string,
+    state: 'track' | 'context' | 'off',
+    deviceId?: string,
+  ) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      if (!deviceId) {
+        const devices = await this.getAvailableDevices(userId);
+        const activeDevice = devices.devices?.find((d) => d.is_active);
+        if (activeDevice) {
+          deviceId = activeDevice.id;
+        }
+      }
+
+      const params = new URLSearchParams({
+        state,
+        ...(deviceId && { device_id: deviceId }),
+      });
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?${params.toString()}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new UnauthorizedException(
+          errorData.error?.message || 'Failed to set repeat mode',
+        );
+      }
+
+      return { success: true, state };
+    } catch (error) {
+      console.error('Error setting repeat mode:', error);
       throw error;
     }
   }

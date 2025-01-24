@@ -25,7 +25,15 @@ import {
   saveTrackToLibrary,
   seekToPosition,
 } from "@/lib/spotify/spotify";
-import { Play, Pause, SkipBack, SkipForward, Info, Heart } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Info,
+  Heart,
+  Repeat,
+} from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -48,6 +56,9 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewTime, setPreviewTime] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [repeatMode, setRepeatMode] = useState<"off" | "track" | "context">(
+    "off"
+  );
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -377,6 +388,40 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     };
   }, [localPlayingState, track.duration_ms, currentProgress]);
 
+  const handleRepeatClick = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+
+      const nextMode =
+        repeatMode === "off"
+          ? "track"
+          : repeatMode === "track"
+          ? "context"
+          : "off";
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/set-repeat-mode`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ state: nextMode }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to change repeat mode");
+      }
+
+      setRepeatMode(nextMode);
+    } catch (error) {
+      console.error("Failed to change repeat mode:", error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -466,6 +511,25 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
               className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
             >
               <SkipForward className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRepeatClick}
+              className={`text-zinc-600 hover:text-zinc-900 dark:hover:text-white transition-colors ${
+                repeatMode !== "off"
+                  ? "text-green-500 dark:text-green-400"
+                  : "dark:text-zinc-400"
+              }`}
+            >
+              <div className="relative">
+                <Repeat className="w-4 h-4" />
+                {repeatMode === "track" && (
+                  <span className="absolute -top-1 -right-1 text-[10px] font-bold">
+                    1
+                  </span>
+                )}
+              </div>
             </Button>
           </div>
         </div>

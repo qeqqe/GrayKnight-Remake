@@ -355,3 +355,31 @@ export const seekToPosition = async (positionMs: number, deviceId?: string) => {
     throw error;
   }
 };
+
+export const setRepeatMode = async (state: "track" | "context" | "off") => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/set-repeat-mode`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to set repeat mode");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error setting repeat mode:", error);
+    throw error;
+  }
+};

@@ -167,4 +167,13 @@ export class SpotifyController {
       body.device_id,
     );
   }
+
+  @Put('set-repeat-mode')
+  @UseGuards(JwtAuthGuard)
+  async setRepeatMode(
+    @Req() req,
+    @Body() body: { state: 'track' | 'context' | 'off' },
+  ) {
+    return this.spotifyService.setRepeatMode(req.user.id, body.state);
+  }
 }
