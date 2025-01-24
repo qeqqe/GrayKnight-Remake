@@ -23,6 +23,7 @@ import {
   checkIfTrackIsSaved,
   removeTrackFromLibrary,
   saveTrackToLibrary,
+  seekToPosition,
 } from "@/lib/spotify/spotify";
 import { Play, Pause, SkipBack, SkipForward, Info, Heart } from "lucide-react";
 import Image from "next/image";
@@ -69,44 +70,76 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     };
   }, [localPlayingState, track.duration_ms, currentProgress]);
 
-  // Add new useEffect for handling track end
+  // Add a function to check and update current track
+  const checkCurrentTrack = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/current-playing`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.item) {
+          // if the current track is different from our track, update playing state
+          if (data.item.id !== track.id) {
+            setLocalPlayingState(false);
+          } else {
+            setLocalPlayingState(data.is_playing);
+            setCurrentProgress(data.progress_ms || 0);
+          }
+        } else {
+          // no track playing
+          setLocalPlayingState(false);
+          setCurrentProgress(0);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check current track:", error);
+    }
+  }, [track.id]);
+
+  // modify the existing track end effect
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let checkInterval: NodeJS.Timeout | null = null;
 
     if (currentProgress >= track.duration_ms) {
-      // Wait for 2.5 seconds after track ends before fetching new state
-      timeoutId = setTimeout(async () => {
-        try {
-          const token = localStorage.getItem("token");
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/current-playing`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+      // wait a moment for the next track to start
+      timeoutId = setTimeout(() => {
+        // start polling for the new track state
+        checkInterval = setInterval(checkCurrentTrack, 1000);
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.item) {
-              // Update local playing state based on new track data
-              setLocalPlayingState(data.is_playing);
-              setCurrentProgress(data.progress_ms || 0);
-            }
+        // stop polling after 5 seconds if nothing changes
+        setTimeout(() => {
+          if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
           }
-        } catch (error) {
-          console.error("Failed to fetch next track:", error);
-        }
-      }, 2500); // 2.5 seconds delay
+        }, 5000);
+      }, 500);
     }
 
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
     };
-  }, [currentProgress, track.duration_ms]);
+  }, [currentProgress, track.duration_ms, checkCurrentTrack]);
+
+  // add polling for track state changes
+  useEffect(() => {
+    const pollInterval = setInterval(checkCurrentTrack, 5000);
+    return () => clearInterval(pollInterval);
+  }, [checkCurrentTrack]);
 
   // sync with incoming track updates
   useEffect(() => {
@@ -229,6 +262,54 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     checkIfTrackIsSavedStatus();
   }, [track.id, checkIfTrackIsSavedStatus]);
 
+  const UpdateTimestamp = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/seek`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            timestamp: currentProgress,
+          }),
+        }
+      );
+      if (response.ok) {
+        console.log("Timestamp updated successfully");
+      } else {
+        throw new Error("Failed to update timestamp");
+      }
+    } catch (error) {
+      console.error("Failed to update timestamp:", error);
+    }
+  };
+
+  const handleProgressBarClick = async (
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = x / width;
+    const positionMs = Math.floor(percentage * track.duration_ms);
+
+    try {
+      await seekToPosition(positionMs);
+      setCurrentProgress(positionMs);
+    } catch (error) {
+      console.error("Failed to seek:", error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -325,7 +406,10 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
 
       {/* progress bar */}
       <div className="mt-6 space-y-1">
-        <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden cursor-pointer"
+          onClick={handleProgressBarClick}
+        >
           <div
             className="h-full bg-green-500 transition-all duration-1000 ease-linear"
             style={{ width: `${progressPercentage}%` }}
@@ -428,6 +512,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
                   <div
                     className="h-full bg-green-500 transition-all duration-500 ease-linear"
                     style={{ width: `${progressPercentage}%` }}
+                    onClick={UpdateTimestamp}
                   />
                 </div>
               </div>

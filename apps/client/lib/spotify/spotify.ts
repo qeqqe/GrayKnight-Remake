@@ -324,3 +324,34 @@ export const saveTrackToLibrary = async (trackId: string) => {
     throw error;
   }
 };
+
+export const seekToPosition = async (positionMs: number, deviceId?: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/seek`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          position_ms: positionMs,
+          device_id: deviceId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to seek to position");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error seeking to position:", error);
+    throw error;
+  }
+};

@@ -461,4 +461,33 @@ export class SpotifyService {
       throw error;
     }
   }
+
+  async seek(userId: string, position_ms: number, device_id?: string) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+      const queryParams = new URLSearchParams({
+        position_ms: position_ms.toString(),
+        ...(device_id && { device_id }),
+      });
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/seek?${queryParams}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to seek track');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error seeking track:', error);
+      throw error;
+    }
+  }
 }

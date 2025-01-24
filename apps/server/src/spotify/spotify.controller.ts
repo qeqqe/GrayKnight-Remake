@@ -154,4 +154,17 @@ export class SpotifyController {
   async saveToLibrary(@Req() req, @Param('trackId') trackId: string) {
     return this.spotifyService.saveToLibrary(req.user.id, trackId);
   }
+
+  @Put('seek')
+  @UseGuards(JwtAuthGuard)
+  async seek(
+    @Req() req,
+    @Body() body: { position_ms: number; device_id?: string },
+  ) {
+    return this.spotifyService.seek(
+      req.user.id,
+      body.position_ms,
+      body.device_id,
+    );
+  }
 }

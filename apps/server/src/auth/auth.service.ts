@@ -17,6 +17,7 @@ export class AuthService {
       where: { spotifyId: profile.spotifyId },
       update: {
         accessToken: profile.accessToken,
+        country: profile.country,
         refreshToken: profile.refreshToken,
         displayName: profile.displayName,
         profileUrl: profile.profileUrl,
@@ -27,6 +28,7 @@ export class AuthService {
         email: profile.email,
         displayName: profile.displayName,
         accessToken: profile.accessToken,
+        country: profile.country,
         refreshToken: profile.refreshToken,
         profileUrl: profile.profileUrl,
         tokenExpiry: new Date(Date.now() + 3600 * 1000),
