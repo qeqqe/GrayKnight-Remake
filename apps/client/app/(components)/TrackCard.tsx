@@ -28,6 +28,11 @@ import {
 import { Play, Pause, SkipBack, SkipForward, Info, Heart } from "lucide-react";
 import Image from "next/image";
 
+const getBubbleWidth = (time: string) => {
+  // Calculate width based on text content
+  return `${time.length * 8 + 16}px`;
+};
+
 interface ArtistDetails {
   id: string;
   name: string;
@@ -40,6 +45,11 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const [artistDetails, setArtistDetails] = useState<ArtistDetails[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const [currentProgress, setCurrentProgress] = useState(track.progress_ms);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isDragging, setIsDragging] = useState(false);
+  const [hoverProgress, setHoverProgress] = useState<number | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewTime, setPreviewTime] = useState("");
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -310,6 +320,28 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     }
   };
 
+  const handleProgressBarMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = (x / width) * 100;
+    const position = Math.min(Math.max(percentage, 0), 100);
+
+    // calculate preview time
+    const previewMs = Math.floor((position / 100) * track.duration_ms);
+    setPreviewTime(formatTime(previewMs));
+    setHoverProgress(position);
+    setShowPreview(true);
+  };
+
+  const handleProgressBarMouseLeave = () => {
+    if (!isDragging) {
+      setHoverProgress(null);
+      setShowPreview(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -405,17 +437,73 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
       </div>
 
       {/* progress bar */}
-      <div className="mt-6 space-y-1">
+      <div className="mt-6 space-y-1 relative">
         <div
-          className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden cursor-pointer"
+          className="w-full h-1.5 group relative bg-zinc-200/10 rounded-full overflow-hidden cursor-pointer"
           onClick={handleProgressBarClick}
+          onMouseMove={handleProgressBarMouseMove}
+          onMouseLeave={handleProgressBarMouseLeave}
         >
+          {/* background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 rounded-full" />
+
+          {/* progress fill */}
           <div
-            className="h-full bg-green-500 transition-all duration-1000 ease-linear"
+            className="absolute h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-150 ease-out rounded-full"
             style={{ width: `${progressPercentage}%` }}
           />
+
+          {/* hover effects */}
+          {hoverProgress !== null && (
+            <>
+              {/* preview bubble */}
+              <div
+                className="absolute -top-8 transform -translate-x-1/2 transition-all duration-75"
+                style={{
+                  left: `${hoverProgress}%`,
+                  width: getBubbleWidth(previewTime),
+                  opacity: showPreview ? 1 : 0,
+                }}
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-white/5 rounded-md blur-md" />
+                  <div className="relative bg-zinc-900 text-white px-2 py-1 rounded-md text-xs font-medium shadow-xl border border-white/10">
+                    {previewTime}
+                  </div>
+                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-zinc-900 border-r border-b border-white/10" />
+                </div>
+              </div>
+
+              {/* hover highlight */}
+              <div
+                className="absolute inset-0 bg-white/5 transition-all duration-150"
+                style={{ width: `${hoverProgress}%` }}
+              />
+
+              {/* hover cursor */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-75"
+                style={{ left: `${hoverProgress}%` }}
+              >
+                <div className="w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm p-[2px] shadow-[0_0_15px_rgba(255,255,255,0.3)] transform -translate-x-1/2">
+                  <div className="w-full h-full rounded-full bg-white" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* current position dot */}
+          <div
+            className="absolute top-1/2 w-3 h-3 -translate-y-1/2 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+            style={{
+              left: `${progressPercentage}%`,
+              transform: "translate(-50%, -50%)",
+              boxShadow: "0 0 10px rgba(255, 255, 255, 0.5)",
+            }}
+          />
         </div>
-        <div className="flex justify-between items-center text-xs text-zinc-500">
+
+        <div className="flex justify-between items-center text-xs text-zinc-400">
           <span>{formattedProgress}</span>
           <span>{formattedDuration}</span>
         </div>
