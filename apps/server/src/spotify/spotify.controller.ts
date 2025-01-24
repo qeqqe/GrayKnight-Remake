@@ -189,4 +189,10 @@ export class SpotifyController {
       body.device_id,
     );
   }
+
+  @Put('toggle-shuffle')
+  @UseGuards(JwtAuthGuard)
+  async toggleShuffle(@Req() req, @Body() body: { state: boolean }) {
+    return this.spotifyService.toggleShuffle(req.user.id, body.state);
+  }
 }

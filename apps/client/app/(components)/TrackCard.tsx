@@ -26,6 +26,7 @@ import {
   saveTrackToLibrary,
   seekToPosition,
   setVolume,
+  toggleShuffle,
 } from "@/lib/spotify/spotify";
 import {
   Play,
@@ -37,6 +38,7 @@ import {
   Repeat,
   Volume2,
   VolumeX,
+  Shuffle, // Add this to the lucide-react imports
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -67,6 +69,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const [volume, setVolumeState] = useState(50);
   const [prevVolume, setPrevVolume] = useState(50);
   const [isMuted, setIsMuted] = useState(false);
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -471,6 +474,17 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     };
   }, [throttledSetVolume]);
 
+  const handleShuffleClick = async () => {
+    try {
+      const response = await toggleShuffle(!shuffleEnabled);
+      if (response.success) {
+        setShuffleEnabled(!shuffleEnabled);
+      }
+    } catch (error) {
+      console.error("Failed to toggle shuffle:", error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -579,6 +593,18 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
                   </span>
                 )}
               </div>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleShuffleClick}
+              className={`text-zinc-600 hover:text-zinc-900 dark:hover:text-white transition-colors ${
+                shuffleEnabled
+                  ? "text-green-500 dark:text-green-400"
+                  : "dark:text-zinc-400"
+              }`}
+            >
+              <Shuffle className="w-4 h-4" />
             </Button>
             <Button
               size="sm"

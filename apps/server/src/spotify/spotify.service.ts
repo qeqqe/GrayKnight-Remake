@@ -609,4 +609,29 @@ export class SpotifyService {
       throw error;
     }
   }
+
+  async toggleShuffle(userId: string, state: boolean) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${state}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to toggle shuffle');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error toggling shuffle:', error);
+      throw error;
+    }
+  }
 }

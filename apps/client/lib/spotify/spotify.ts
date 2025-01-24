@@ -414,3 +414,31 @@ export const setVolume = async (volume: number, deviceId?: string) => {
     throw error;
   }
 };
+
+export const toggleShuffle = async (state: boolean) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/toggle-shuffle`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ state }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to toggle shuffle");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error toggling shuffle:", error);
+    throw error;
+  }
+};
