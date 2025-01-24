@@ -51,11 +51,22 @@ export class SpotifyService {
       },
     );
 
+    // Handle 204 No Content response
+    if (response.status === 204) {
+      return null;
+    }
+
     if (!response.ok) {
       throw new UnauthorizedException('Failed to fetch current track');
     }
 
-    return response.json();
+    const text = await response.text(); // Get response as text first
+    try {
+      return text ? JSON.parse(text) : null; // Parse if there's content
+    } catch (error) {
+      console.error('Error parsing response:', error);
+      return null;
+    }
   }
 
   async getRecentTracks(userId: string) {

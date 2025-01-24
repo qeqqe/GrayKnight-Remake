@@ -44,7 +44,6 @@ export class AuthService {
       email: user.email,
     };
 
-    // Set longer expiration time (e.g., 7 days)
     return this.jwtService.signAsync(payload, { expiresIn: '7d' });
   }
 
@@ -57,7 +56,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Check if token needs refresh (5 minutes before expiry)
+    // check if token needs refresh (5 minutes before expiry)
     const needsRefresh = user.tokenExpiry
       ? new Date(user.tokenExpiry).getTime() - Date.now() < 300000
       : true;

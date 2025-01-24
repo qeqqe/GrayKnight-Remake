@@ -27,11 +27,7 @@ import {
 } from "@/lib/spotify/spotify";
 import { Play, Pause, SkipBack, SkipForward, Info, Heart } from "lucide-react";
 import Image from "next/image";
-
-const getBubbleWidth = (time: string) => {
-  // Calculate width based on text content
-  return `${time.length * 8 + 16}px`;
-};
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ArtistDetails {
   id: string;
@@ -48,8 +44,10 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDragging, setIsDragging] = useState(false);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showPreview, setShowPreview] = useState(false);
   const [previewTime, setPreviewTime] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -80,8 +78,10 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     };
   }, [localPlayingState, track.duration_ms, currentProgress]);
 
-  // Add a function to check and update current track
+  // ipdate the checkCurrentTrack function to be more robust
   const checkCurrentTrack = useCallback(async () => {
+    if (!isActive) return; // don't check if component is unmounting
+
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -96,53 +96,66 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
       if (response.ok) {
         const data = await response.json();
         if (data && data.item) {
-          // if the current track is different from our track, update playing state
-          if (data.item.id !== track.id) {
-            setLocalPlayingState(false);
-          } else {
+          if (data.item.id === track.id) {
             setLocalPlayingState(data.is_playing);
-            setCurrentProgress(data.progress_ms || 0);
+            // Only update progress if the difference is significant
+            const progressDiff = Math.abs(data.progress_ms - currentProgress);
+            if (progressDiff > 2000) {
+              // If difference is more than 2 seconds
+              setCurrentProgress(data.progress_ms);
+            }
+          } else {
+            setLocalPlayingState(false);
           }
         } else {
-          // no track playing
           setLocalPlayingState(false);
-          setCurrentProgress(0);
         }
       }
     } catch (error) {
       console.error("Failed to check current track:", error);
     }
-  }, [track.id]);
+  }, [track.id, currentProgress, isActive]);
 
-  // modify the existing track end effect
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    let checkInterval: NodeJS.Timeout | null = null;
+    let progressInterval: NodeJS.Timeout | null = null;
+    let syncInterval: NodeJS.Timeout | null = null;
 
-    if (currentProgress >= track.duration_ms) {
-      // wait a moment for the next track to start
-      timeoutId = setTimeout(() => {
-        // start polling for the new track state
-        checkInterval = setInterval(checkCurrentTrack, 1000);
-
-        // stop polling after 5 seconds if nothing changes
-        setTimeout(() => {
-          if (checkInterval) {
-            clearInterval(checkInterval);
-            checkInterval = null;
+    if (localPlayingState && currentProgress < track.duration_ms) {
+      progressInterval = setInterval(() => {
+        setCurrentProgress((prev) => {
+          if (prev >= track.duration_ms) {
+            if (progressInterval) clearInterval(progressInterval);
+            return track.duration_ms;
           }
-        }, 5000);
-      }, 500);
+          return prev + 1000;
+        });
+      }, 1000);
+
+      // Sync with Spotify every 7 sec
+      syncInterval = setInterval(checkCurrentTrack, 7000);
     }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
+      if (progressInterval) clearInterval(progressInterval);
+      if (syncInterval) clearInterval(syncInterval);
     };
+  }, [
+    localPlayingState,
+    track.duration_ms,
+    checkCurrentTrack,
+    currentProgress,
+  ]);
+
+  useEffect(() => {
+    setIsActive(true);
+    return () => setIsActive(false);
+  }, []);
+
+  useEffect(() => {
+    if (currentProgress >= track.duration_ms) {
+      const timeoutId = setTimeout(checkCurrentTrack, 1000);
+      return () => clearTimeout(timeoutId);
+    }
   }, [currentProgress, track.duration_ms, checkCurrentTrack]);
 
   // add polling for track state changes
@@ -342,6 +355,28 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     }
   };
 
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout | null = null;
+    let lastUpdate = Date.now();
+
+    if (localPlayingState && currentProgress < track.duration_ms) {
+      progressInterval = setInterval(() => {
+        const now = Date.now();
+        const delta = now - lastUpdate;
+        lastUpdate = now;
+
+        setCurrentProgress((prev) => {
+          const next = prev + delta;
+          return next >= track.duration_ms ? track.duration_ms : next;
+        });
+      }, 50);
+    }
+
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
+  }, [localPlayingState, track.duration_ms, currentProgress]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -437,72 +472,88 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
       </div>
 
       {/* progress bar */}
-      <div className="mt-6 space-y-1 relative">
+      <div className="mt-6 space-y-1 relative select-none group">
         <div
-          className="w-full h-1.5 group relative bg-zinc-200/10 rounded-full overflow-hidden cursor-pointer"
+          className="w-full py-2 relative bg-transparent group/progress cursor-pointer"
           onClick={handleProgressBarClick}
           onMouseMove={handleProgressBarMouseMove}
           onMouseLeave={handleProgressBarMouseLeave}
         >
-          {/* background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 rounded-full" />
+          <div className="w-full h-1.5 relative bg-zinc-200/10 rounded-full overflow-visible hover:h-[6px] transition-all duration-100">
+            {/* base track */}
+            <div className="absolute inset-0 bg-zinc-800/50 rounded-full" />
 
-          {/* progress fill */}
-          <div
-            className="absolute h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-150 ease-out rounded-full"
-            style={{ width: `${progressPercentage}%` }}
-          />
+            {/* progress fill */}
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
+              style={{ width: `${progressPercentage}%` }}
+              transition={{ type: "spring", bounce: 0 }}
+            />
 
-          {/* hover effects */}
-          {hoverProgress !== null && (
-            <>
-              {/* preview bubble */}
-              <div
-                className="absolute -top-8 transform -translate-x-1/2 transition-all duration-75"
-                style={{
-                  left: `${hoverProgress}%`,
-                  width: getBubbleWidth(previewTime),
-                  opacity: showPreview ? 1 : 0,
-                }}
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-white/5 rounded-md blur-md" />
-                  <div className="relative bg-zinc-900 text-white px-2 py-1 rounded-md text-xs font-medium shadow-xl border border-white/10">
-                    {previewTime}
-                  </div>
-                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-zinc-900 border-r border-b border-white/10" />
-                </div>
-              </div>
+            {/* interactive elements container */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <AnimatePresence>
+                {hoverProgress !== null && (
+                  <>
+                    {/* preview bubble */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ type: "spring", bounce: 0 }}
+                      className="absolute -top-10 transform -translate-x-1/2 pointer-events-none"
+                      style={{
+                        left: `${hoverProgress}%`,
+                        minWidth: "40px",
+                      }}
+                    >
+                      <div className="relative px-2 py-1 bg-black/90 rounded text-xs text-white font-medium shadow-xl">
+                        {previewTime}
+                        <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-black/90 transform -translate-x-1/2 rotate-45" />
+                      </div>
+                    </motion.div>
 
-              {/* hover highlight */}
-              <div
-                className="absolute inset-0 bg-white/5 transition-all duration-150"
-                style={{ width: `${hoverProgress}%` }}
-              />
+                    {/* hover highlight */}
+                    <motion.div
+                      className="absolute inset-y-0 left-0 bg-white/10"
+                      style={{ width: `${hoverProgress}%` }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    />
 
-              {/* hover cursor */}
-              <div
-                className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-75"
-                style={{ left: `${hoverProgress}%` }}
-              >
-                <div className="w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm p-[2px] shadow-[0_0_15px_rgba(255,255,255,0.3)] transform -translate-x-1/2">
-                  <div className="w-full h-full rounded-full bg-white" />
-                </div>
-              </div>
-            </>
-          )}
+                    {/* dots container - ensures proper alignment */}
+                    <div className="absolute inset-0 pointer-events-none">
+                      {/* hover dot */}
+                      <motion.div
+                        className="absolute top-[50%] -translate-y-[50%]"
+                        style={{
+                          left: `${hoverProgress}%`,
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        transition={{ type: "spring", bounce: 0 }}
+                      >
+                        <div className="w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                      </motion.div>
 
-          {/* current position dot */}
-          <div
-            className="absolute top-1/2 w-3 h-3 -translate-y-1/2 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
-            style={{
-              left: `${progressPercentage}%`,
-              transform: "translate(-50%, -50%)",
-              boxShadow: "0 0 10px rgba(255, 255, 255, 0.5)",
-            }}
-          />
+                      {/* current position dot */}
+                      <motion.div
+                        className="absolute top-[50%] -translate-y-[50%]"
+                        style={{
+                          left: `${progressPercentage}%`,
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        transition={{ type: "spring", bounce: 0 }}
+                      >
+                        <div className="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                      </motion.div>
+                    </div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
-
         <div className="flex justify-between items-center text-xs text-zinc-400">
           <span>{formattedProgress}</span>
           <span>{formattedDuration}</span>
