@@ -1,13 +1,22 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthService } from 'src/auth/auth.service';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 @Injectable()
 export class SpotifyService {
+  private volumeRateLimiter: RateLimiterMemory;
+
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
-  ) {}
+  ) {
+    // Initialize rate limiter: 1 request per second per user
+    this.volumeRateLimiter = new RateLimiterMemory({
+      points: 1, // 1 request
+      duration: 1, // per 1 second
+    });
+  }
 
   async getUserProfile(userId: string) {
     try {
@@ -560,6 +569,43 @@ export class SpotifyService {
       return { success: true, state };
     } catch (error) {
       console.error('Error setting repeat mode:', error);
+      throw error;
+    }
+  }
+
+  async setVolume(userId: string, volume_percent: number, device_id?: string) {
+    try {
+      await this.volumeRateLimiter.consume(userId);
+
+      const accessToken = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/volume?volume_percent=${volume_percent}${
+          device_id ? `&device_id=${device_id}` : ''
+        }`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new UnauthorizedException('Too many requests. Please wait.');
+        }
+        throw new UnauthorizedException('Failed to set volume');
+      }
+
+      return { success: true };
+    } catch (error) {
+      if (error.message === 'Too Many Requests') {
+        throw new UnauthorizedException(
+          'Too many volume adjustment requests. Please wait.',
+        );
+      }
+      console.error('Error setting volume:', error);
       throw error;
     }
   }

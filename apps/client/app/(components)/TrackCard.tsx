@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
+import { throttle } from "lodash";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
   removeTrackFromLibrary,
   saveTrackToLibrary,
   seekToPosition,
+  setVolume,
 } from "@/lib/spotify/spotify";
 import {
   Play,
@@ -33,9 +35,12 @@ import {
   Info,
   Heart,
   Repeat,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { Slider } from "@/components/ui/slider";
 
 interface ArtistDetails {
   id: string;
@@ -59,6 +64,9 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
   const [repeatMode, setRepeatMode] = useState<"off" | "track" | "context">(
     "off"
   );
+  const [volume, setVolumeState] = useState(50);
+  const [prevVolume, setPrevVolume] = useState(50);
+  const [isMuted, setIsMuted] = useState(false);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -422,6 +430,47 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const throttledSetVolume = useCallback(
+    throttle(async (newVolume: number) => {
+      try {
+        await setVolume(newVolume);
+      } catch (error) {
+        console.error("Failed to set volume:", error);
+      }
+    }, 1000),
+    []
+  );
+
+  const handleVolumeChange = (values: number[]) => {
+    const newVolume = values[0];
+    setVolumeState(newVolume);
+    throttledSetVolume(newVolume);
+  };
+
+  const toggleMute = async () => {
+    try {
+      if (isMuted) {
+        setVolumeState(prevVolume);
+        throttledSetVolume(prevVolume);
+        setIsMuted(false);
+      } else {
+        setPrevVolume(volume);
+        setVolumeState(0);
+        throttledSetVolume(0);
+        setIsMuted(true);
+      }
+    } catch (error) {
+      console.error("Failed to toggle mute:", error);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      throttledSetVolume.cancel();
+    };
+  }, [throttledSetVolume]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
@@ -531,6 +580,31 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
                 )}
               </div>
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleMute}
+              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+            </Button>
+            <div className="w-24">
+              <Slider
+                defaultValue={[50]}
+                max={100}
+                step={1}
+                value={[volume]}
+                onValueChange={handleVolumeChange}
+                className="cursor-pointer"
+              />
+            </div>
+            <span className="text-xs text-zinc-400 min-w-[2rem]">
+              {volume}%
+            </span>
           </div>
         </div>
       </div>

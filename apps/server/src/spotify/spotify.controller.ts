@@ -176,4 +176,17 @@ export class SpotifyController {
   ) {
     return this.spotifyService.setRepeatMode(req.user.id, body.state);
   }
+
+  @Put('set-volume')
+  @UseGuards(JwtAuthGuard)
+  async setVolume(
+    @Req() req,
+    @Body() body: { volume_percent: number; device_id?: string },
+  ) {
+    return this.spotifyService.setVolume(
+      req.user.id,
+      body.volume_percent,
+      body.device_id,
+    );
+  }
 }
