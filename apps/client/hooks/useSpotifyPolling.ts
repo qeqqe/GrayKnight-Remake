@@ -26,7 +26,6 @@ export function useSpotifyPolling(initialTrack: spotifyTrack | null) {
 
         if (response.ok) {
           const data = await response.json();
-          // The API returns the track data in data.item
           if (data && data.item) {
             const trackData: spotifyTrack = {
               ...data.item,

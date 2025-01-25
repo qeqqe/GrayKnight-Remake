@@ -243,7 +243,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     };
   }, [localPlayingState, track.duration_ms]);
 
-  // Remove or modify slower polling intervals
+  // remove or modify slower polling intervals
   useEffect(() => {
     const pollInterval = setInterval(checkCurrentTrack, 1000);
     return () => clearInterval(pollInterval);

@@ -7,6 +7,7 @@ export interface spotifyTrack {
   popularity: number;
   preview_url?: string;
   explicit: boolean;
+  uri: string;
   album?: {
     name: string;
     release_date?: string;
@@ -27,6 +28,9 @@ export interface spotifyTrack {
       spotify: string;
     };
   }>;
+  external_urls: {
+    spotify: string;
+  };
 }
 
 export interface SpotifyDevice {
