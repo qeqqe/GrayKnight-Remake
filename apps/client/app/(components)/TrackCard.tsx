@@ -51,6 +51,22 @@ interface ArtistDetails {
 }
 
 export default function TrackCard({ track }: { track: spotifyTrack }) {
+  if (!track || !track.album) {
+    return (
+      <div className="h-full flex items-center justify-center text-zinc-500">
+        <p>Loading track information...</p>
+      </div>
+    );
+  }
+
+  return <TrackCardContent track={{ ...track, album: track.album }} />;
+}
+
+type TrackWithRequiredAlbum = Omit<spotifyTrack, "album"> & {
+  album: NonNullable<spotifyTrack["album"]>;
+};
+
+function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [localPlayingState, setLocalPlayingState] = useState(track.is_playing);
   const [artistDetails, setArtistDetails] = useState<ArtistDetails[]>([]);
@@ -77,7 +93,17 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
       .padStart(2, "0")}`;
   };
 
-  // update progress timer
+  const formattedProgress = formatTime(currentProgress);
+  const formattedDuration = track?.duration_ms
+    ? formatTime(track.duration_ms)
+    : "0:00";
+  const formattedDate = track?.album?.release_date
+    ? format(new Date(track.album.release_date), "dd/MM/yyyy")
+    : "Release date unavailable";
+  const progressPercentage = track?.duration_ms
+    ? (currentProgress / track.duration_ms) * 100
+    : 0;
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
@@ -100,9 +126,8 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     };
   }, [localPlayingState, track.duration_ms, currentProgress]);
 
-  // ipdate the checkCurrentTrack function to be more robust
   const checkCurrentTrack = useCallback(async () => {
-    if (!isActive) return; // don't check if component is unmounting
+    if (!isActive) return;
 
     try {
       const token = localStorage.getItem("token");
@@ -120,7 +145,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
         if (data && data.item) {
           if (data.item.id === track.id) {
             setLocalPlayingState(data.is_playing);
-            // Only update progress if the difference is significant
+            // only update progress if the difference is significant
             const progressDiff = Math.abs(data.progress_ms - currentProgress);
             if (progressDiff > 2000) {
               // If difference is more than 2 seconds
@@ -191,13 +216,38 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     setCurrentProgress(track.progress_ms);
   }, [track.progress_ms]);
 
-  const formattedProgress = formatTime(currentProgress);
-  const formattedDuration = formatTime(track.duration_ms);
-  const progressPercentage = (currentProgress / track.duration_ms) * 100;
+  // update track data when props change
+  useEffect(() => {
+    setLocalPlayingState(track.is_playing);
+    setCurrentProgress(track.progress_ms);
+  }, [track.id, track.is_playing, track.progress_ms]);
 
-  const formattedDate = track.album.release_date
-    ? format(new Date(track.album.release_date), "dd/MM/yyyy")
-    : "Release date unavailable";
+  // more frequent progress updates for smoother UI
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout | null = null;
+
+    if (localPlayingState) {
+      progressInterval = setInterval(() => {
+        setCurrentProgress((prev) => {
+          if (prev >= track.duration_ms) {
+            if (progressInterval) clearInterval(progressInterval);
+            return track.duration_ms;
+          }
+          return prev + 100; // Update every 100ms for smoother progress
+        });
+      }, 100);
+    }
+
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
+  }, [localPlayingState, track.duration_ms]);
+
+  // Remove or modify slower polling intervals
+  useEffect(() => {
+    const pollInterval = setInterval(checkCurrentTrack, 1000);
+    return () => clearInterval(pollInterval);
+  }, [checkCurrentTrack]);
 
   console.log("Track in card:", track);
 
@@ -489,8 +539,8 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
       <div className="flex gap-6">
         <div className="relative group">
           <Image
-            src={track.album.images[0]?.url}
-            alt={track.album.name}
+            src={track?.album?.images?.[0]?.url || "/fallback-image.png"}
+            alt={track?.album?.name || "Album cover"}
             width={128}
             height={128}
             className="rounded-lg shadow-md"

@@ -1,9 +1,16 @@
 import { spotifyTrack } from "@/lib/types";
 import { Music2 } from "lucide-react";
 import TrackCard from "./TrackCard";
+import { useSpotifyPolling } from "@/hooks/useSpotifyPolling";
 
-export const CurrentlyPlaying = ({ track }: { track: spotifyTrack | null }) => {
-  if (!track) {
+export const CurrentlyPlaying = ({
+  track: initialTrack,
+}: {
+  track: spotifyTrack | null;
+}) => {
+  const { currentTrack } = useSpotifyPolling(initialTrack);
+
+  if (!currentTrack) {
     return (
       <div className="h-full flex items-center justify-center text-zinc-500">
         <div className="text-center space-y-2">
@@ -16,5 +23,5 @@ export const CurrentlyPlaying = ({ track }: { track: spotifyTrack | null }) => {
     );
   }
 
-  return <TrackCard track={track} />;
+  return <TrackCard track={currentTrack} />;
 };
