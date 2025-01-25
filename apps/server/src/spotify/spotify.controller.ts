@@ -8,6 +8,7 @@ import {
   UseGuards,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { SpotifyService } from './spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
@@ -194,5 +195,15 @@ export class SpotifyController {
   @UseGuards(JwtAuthGuard)
   async toggleShuffle(@Req() req, @Body() body: { state: boolean }) {
     return this.spotifyService.toggleShuffle(req.user.id, body.state);
+  }
+
+  @Get('recently-played')
+  @UseGuards(JwtAuthGuard)
+  async getRecentlyPlayed(
+    @Req() req,
+    @Query('after') after?: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.spotifyService.getRecentlyPlayed(req.user.id, after, limit);
   }
 }

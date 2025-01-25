@@ -43,3 +43,59 @@ export interface SpotifyDevice {
   volume_percent: number;
   supports_volume: boolean;
 }
+
+export interface RecentlyPlayedItem {
+  track: {
+    album: {
+      album_type: string;
+      artists: Artist[];
+      images: AlbumImage[];
+      name: string;
+      release_date: string;
+      external_urls: {
+        spotify: string;
+      };
+    };
+    artists: Artist[];
+    duration_ms: number;
+    explicit: boolean;
+    external_urls: {
+      spotify: string;
+    };
+    id: string;
+    name: string;
+    popularity: number;
+    preview_url: string | null;
+  };
+  played_at: string;
+  context: {
+    type: string;
+    external_urls: {
+      spotify: string;
+    };
+    uri: string;
+  };
+}
+
+export interface RecentlyPlayedResponse {
+  items: RecentlyPlayedItem[];
+  cursors: {
+    after: string;
+    before: string;
+  };
+  limit: number;
+  next: string;
+}
+
+export interface Artist {
+  external_urls: {
+    spotify: string;
+  };
+  name: string;
+}
+
+export interface AlbumImage {
+  height: number;
+  url: string;
+  width: number;
+}

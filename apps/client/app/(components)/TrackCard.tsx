@@ -44,6 +44,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import DecryptedText from "@/src/reactbits/TextAnimations/DecryptedText/DecryptedText";
 import ElasticSlider from "@/src/reactbits/Components/ElasticSlider/ElasticSlider";
+import { TrackArtwork } from "./TrackArtwork";
 interface ArtistDetails {
   id: string;
   name: string;
@@ -86,6 +87,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
   const [prevVolume, setPrevVolume] = useState(50);
   const [isMuted, setIsMuted] = useState(false);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [prevTrackId, setPrevTrackId] = useState(track.id);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -248,6 +250,12 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     const pollInterval = setInterval(checkCurrentTrack, 1000);
     return () => clearInterval(pollInterval);
   }, [checkCurrentTrack]);
+
+  useEffect(() => {
+    if (prevTrackId !== track.id) {
+      setPrevTrackId(track.id);
+    }
+  }, [track.id, prevTrackId]);
 
   console.log("Track in card:", track);
 
@@ -537,14 +545,11 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-6">
-        <div className="relative group">
-          <Image
-            src={track?.album?.images?.[0]?.url || "/fallback-image.png"}
-            alt={track?.album?.name || "Album cover"}
-            width={128}
-            height={128}
-            className="rounded-lg shadow-md"
-            priority
+        <div className="relative w-32 h-32">
+          <TrackArtwork
+            imageUrl={track?.album?.images?.[0]?.url}
+            albumName={track?.album?.name}
+            trackId={track.id}
           />
         </div>
 

@@ -634,4 +634,32 @@ export class SpotifyService {
       throw error;
     }
   }
+
+  async getRecentlyPlayed(userId: string, after?: string, limit: number = 20) {
+    try {
+      const accessToken = await this.authService.refreshToken(userId);
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        ...(after && { after }),
+      });
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/recently-played?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to fetch recently played');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching recently played:', error);
+      throw error;
+    }
+  }
 }

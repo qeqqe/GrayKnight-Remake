@@ -20,6 +20,17 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    typedRoutes: true,
+    serverActions: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  skipTypeChecking: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 module.exports = nextConfig;

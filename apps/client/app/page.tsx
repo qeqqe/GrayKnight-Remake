@@ -1,6 +1,7 @@
 "use client";
 import { Music2, History, BarChart3, Music } from "lucide-react";
-
+import ShinyText from "@/src/reactbits/TextAnimations/ShinyText/ShinyText";
+import ASCIIText from "@/src/reactbits/TextAnimations/ASCIIText/ASCIIText";
 export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white relative overflow-hidden">
@@ -10,27 +11,31 @@ export default function WelcomePage() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* hero section */}
+
         <div className="text-center mb-32 space-y-8">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
             <Music className="w-4 h-4 text-gray-400 mr-2" />
-            <span className="text-sm font-mono bg-gradient-to-r from-gray-400 to-gray-200 bg-clip-text text-transparent">
+            {/* <span className="text-sm font-mono bg-gradient-to-r from-gray-400 to-gray-200 bg-clip-text text-transparent">
               GRAYKNIGHT
-            </span>
+            </span> */}
+            <ShinyText text={"GRAYKNIGHT"} speed={5} className="text-sm" />
           </div>
 
-          <div className="relative">
+          <div className="relative h-[300px] w-full">
             <div className="absolute -inset-x-20 -top-16 h-44 bg-gradient-to-r from-gray-500/20 to-gray-300/20 blur-3xl opacity-50" />
             <h2 className="text-2xl text-gray-400 font-medium mb-2">
               Welcome to
             </h2>
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
-              <span className="inline-block animate-text-shimmer bg-[linear-gradient(45deg,theme(colors.gray.400),theme(colors.white),theme(colors.gray.400))] bg-[200%_auto] bg-clip-text text-transparent">
-                Gray
-              </span>
-              <span className="bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 bg-clip-text text-transparent">
-                Knight
-              </span>
-            </h1>
+            <div className="relative h-[17em] w-full">
+              <ASCIIText
+                text="GRAYKNIGHT"
+                enableWaves={false}
+                asciiFontSize={7}
+                textFontSize={100}
+                planeBaseHeight={10}
+                textColor="#ffffff"
+              />
+            </div>
           </div>
 
           <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">

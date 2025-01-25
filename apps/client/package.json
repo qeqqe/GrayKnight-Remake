@@ -24,6 +24,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
+    "gsap": "^3.12.5",
     "lodash": "^4.17.21",
     "lucide-react": "^0.473.0",
     "next": "14.2.16",
@@ -33,7 +34,8 @@
     "react-redux": "^9.2.0",
     "sass": "^1.83.4",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.167.1"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.14",

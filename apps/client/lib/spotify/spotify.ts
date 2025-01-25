@@ -442,3 +442,38 @@ export const toggleShuffle = async (state: boolean) => {
     throw error;
   }
 };
+
+export const fetchRecentlyPlayed = async (
+  after?: string,
+  limit: number = 20
+) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Spotify token not found");
+    }
+
+    const params = new URLSearchParams({
+      ...(after && { after }),
+      limit: limit.toString(),
+    });
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/recently-played?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch recently played tracks");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch recently played tracks:", error);
+    throw error;
+  }
+};
