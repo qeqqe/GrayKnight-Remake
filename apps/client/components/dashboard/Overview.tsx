@@ -1,6 +1,7 @@
 import { Music2, BarChart3, Clock } from "lucide-react";
 import { spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
+import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
 
 interface OverviewProps {
   currentTrack: spotifyTrack | null;
@@ -47,7 +48,16 @@ export function Overview({ currentTrack }: OverviewProps) {
       </div>
 
       <div className="rounded-xl bg-white/[0.03] border border-white/10 p-6">
-        <h3 className="text-lg font-semibold mb-4">Now Playing</h3>
+        <SplitText
+          text="Now playing"
+          delay={50}
+          textAlign="center"
+          className="text-lg font-semibold mb-8"
+          animationFrom={{ opacity: 0, transform: "translate3d(0,20px,0)" }}
+          animationTo={{ opacity: 1, transform: "translate3d(0,0,0)" }}
+          onLetterAnimationComplete={() => console.log("Animation completed")}
+        />
+        <div className="min-h-[1vh]"></div>
         <CurrentlyPlaying track={currentTrack} />
       </div>
 

@@ -38,12 +38,12 @@ import {
   Repeat,
   Volume2,
   VolumeX,
-  Shuffle, // Add this to the lucide-react imports
+  Shuffle,
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Slider } from "@/components/ui/slider";
-
+import DecryptedText from "@/src/reactbits/TextAnimations/DecryptedText/DecryptedText";
+import ElasticSlider from "@/src/reactbits/Components/ElasticSlider/ElasticSlider";
 interface ArtistDetails {
   id: string;
   name: string;
@@ -445,8 +445,7 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
     []
   );
 
-  const handleVolumeChange = (values: number[]) => {
-    const newVolume = values[0];
+  const handleVolumeChange = (newVolume: number) => {
     setVolumeState(newVolume);
     throttledSetVolume(newVolume);
   };
@@ -618,17 +617,20 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
                 <Volume2 className="w-4 h-4" />
               )}
             </Button>
-            <div className="w-24">
-              <Slider
-                defaultValue={[50]}
-                max={100}
-                step={1}
-                value={[volume]}
-                onValueChange={handleVolumeChange}
-                className="cursor-pointer"
+            <div className="w-32">
+              <ElasticSlider
+                defaultValue={volume}
+                startingValue={0}
+                maxValue={100}
+                isStepped={true}
+                stepSize={5}
+                className="volume-slider"
+                leftIcon={<VolumeX className="w-3 h-3 text-zinc-400" />}
+                rightIcon={<Volume2 className="w-3 h-3 text-zinc-400" />}
+                onChange={handleVolumeChange}
               />
             </div>
-            <span className="text-xs text-zinc-400 min-w-[2rem]">
+            <span className="text-xs text-zinc-400 text-[0.75rem] font-medium tracking-tighter min-w-[2rem]">
               {volume}%
             </span>
           </div>
@@ -753,7 +755,17 @@ export default function TrackCard({ track }: { track: spotifyTrack }) {
             <div className="space-y-6">
               <div>
                 <h3 className="text-2xl font-bold text-green-400 flex items-center gap-2">
-                  {track.name}
+                  <DecryptedText
+                    text={track.name}
+                    speed={50}
+                    maxIterations={3}
+                    sequential={true}
+                    revealDirection="center"
+                    useOriginalCharsOnly={true}
+                    animateOn="view"
+                    className="text-green-400"
+                    encryptedClassName="text-zinc-600"
+                  />
                   {track.explicit && (
                     <span className="inline-block px-2 py-1 text-xs font-medium bg-zinc-800 text-zinc-300 rounded">
                       E
