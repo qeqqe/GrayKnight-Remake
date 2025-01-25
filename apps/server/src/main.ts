@@ -11,16 +11,21 @@ async function bootstrap() {
   const prismaService = app.get(PrismaService);
 
   app.enableCors({
-    origin:
-      configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
+    origin: [
+      configService.get<string>('FRONTEND_URL'),
+      'https://gray-knight-remake.vercel.app',
+      'https://accounts.spotify.com',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   await prismaService.enableShutdownHooks(app);
 
-  const port = configService.get<string>('SERVER_PORT') || 3001;
-  await app.listen(port);
-  logger.log(`🚀 Application is running on: ${await app.getUrl()}`);
-  logger.log(`WebSocket server is running on port ${port}`);
+  const port =
+    process.env.PORT || configService.get<string>('SERVER_PORT') || 3001;
+  await app.listen(port, '0.0.0.0');
+  logger.log(`🚀 Application is running on port ${port}`);
 }
 bootstrap();
