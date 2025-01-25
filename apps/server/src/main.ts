@@ -18,7 +18,7 @@ async function bootstrap() {
 
   await prismaService.enableShutdownHooks(app);
 
-  const port = configService.get<string>('PORT') || 3001;
+  const port = configService.get<string>('SERVER_PORT') || 3001;
   await app.listen(port);
   logger.log(`🚀 Application is running on: ${await app.getUrl()}`);
   logger.log(`WebSocket server is running on port ${port}`);
