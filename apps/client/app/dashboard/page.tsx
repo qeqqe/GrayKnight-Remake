@@ -10,6 +10,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Overview } from "@/components/dashboard/Overview";
 import AvailableDevices from "../(components)/AvailableDevices";
+import SearchSection from "../(components)/SearchSection";
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg";
 
@@ -184,6 +185,11 @@ const Page = () => {
                       label: "Overview",
                     },
                     {
+                      value: "search",
+                      icon: <Search className="w-4 h-4" />,
+                      label: "Search",
+                    },
+                    {
                       value: "library",
                       icon: <Library className="w-4 h-4" />,
                       label: "Library",
@@ -197,11 +203,6 @@ const Page = () => {
                       value: "history",
                       icon: <History className="w-4 h-4" />,
                       label: "History",
-                    },
-                    {
-                      value: "search",
-                      icon: <Search className="w-4 h-4" />,
-                      label: "Search",
                     },
                   ].map((item) => (
                     <TabsTrigger
@@ -229,6 +230,11 @@ const Page = () => {
             <TabsContent value="overview" className="mt-0 space-y-4">
               <Overview currentTrack={currentTrack} />
             </TabsContent>
+            <TabsContent value="search" className="mt-0">
+              <Card className="bg-white/[0.03] border-white/10">
+                <SearchSection />
+              </Card>
+            </TabsContent>
             <TabsContent value="library" className="mt-0">
               <Card className="bg-white/[0.03] border-white/10">
                 <CardContent className="p-6">
@@ -252,14 +258,6 @@ const Page = () => {
                 <CardContent className="p-6">
                   <h2 className="text-2xl font-bold mb-4">History</h2>
                   {/* History content */}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="search" className="mt-0">
-              <Card className="bg-white/[0.03] border-white/10">
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold mb-4">Search</h2>
-                  {/* Search content */}
                 </CardContent>
               </Card>
             </TabsContent>

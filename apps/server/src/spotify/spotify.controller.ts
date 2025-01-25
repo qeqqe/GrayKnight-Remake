@@ -44,8 +44,8 @@ export class SpotifyController {
 
   @Post('add-to-queue')
   @UseGuards(JwtAuthGuard)
-  async addToQueue(@Req() req, endpoint: string) {
-    return this.spotifyService.addToQueue(req.user.id, endpoint);
+  async addToQueue(@Req() req, @Body() body: { endpoint: string }) {
+    return this.spotifyService.addToQueue(req.user.id, body.endpoint);
   }
 
   @Put('play-spotify-track')
@@ -80,13 +80,24 @@ export class SpotifyController {
   @UseGuards(JwtAuthGuard)
   async search(@Req() req) {
     const { q, type, limit, offset, market } = req.query;
-    return this.spotifyService.search(req.user.id, {
-      query: q,
-      type,
-      limit: Number(limit),
-      offset: Number(offset),
-      market,
-    });
+    console.log('Search request:', { q, type, limit, offset, market });
+
+    try {
+      const result = await this.spotifyService.search(req.user.id, {
+        query: q,
+        type,
+        limit: Number(limit),
+        offset: Number(offset),
+        market,
+      });
+
+      const data = await result.json();
+      console.log('Search response:', data);
+      return data;
+    } catch (error) {
+      console.error('Search error:', error);
+      throw error;
+    }
   }
 
   @Get('fetch-top-tracks')

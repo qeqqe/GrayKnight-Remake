@@ -58,21 +58,28 @@ export async function addToQueue(trackUri: string, deviceId?: string) {
     ...(deviceId && { device_id: deviceId }),
   });
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/add-to-queue`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        endpoint: `https://api.spotify.com/v1/me/player/queue?${params.toString()}`,
-      }),
+  const endpoint = `https://api.spotify.com/v1/me/player/queue?${params.toString()}`;
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/add-to-queue`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ endpoint }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || "Failed to add to queue");
     }
-  );
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error.message || "Failed to add to queue");
+  } catch (error) {
+    console.error("Failed to add to queue:", error);
+    throw error;
   }
 }
 
@@ -164,11 +171,10 @@ export async function searchSpotify(
     type: types.join(","),
     limit: (options?.limit || 20).toString(),
     offset: (options?.offset || 0).toString(),
+    market: options?.market || "US",
   });
 
-  if (options?.market) {
-    params.append("market", options.market);
-  }
+  console.log("Search params:", params.toString());
 
   try {
     const response = await fetch(
@@ -183,11 +189,16 @@ export async function searchSpotify(
     );
 
     if (!response.ok) {
+      console.error("Search response not ok:", response.status);
       const error = await response.json();
-      throw new Error(error.error.message || "Failed to search");
+      throw new Error(error.error?.message || "Failed to search");
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log("Raw search result:", result);
+
+    // If the response is wrapped in a json property, unwrap it
+    return result.json ? await response.json() : result;
   } catch (error) {
     console.error("Search failed:", error);
     throw error;

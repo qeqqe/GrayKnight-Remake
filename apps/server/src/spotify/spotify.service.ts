@@ -121,6 +121,10 @@ export class SpotifyService {
 
   async addToQueue(userId: string, endpoint: string) {
     try {
+      if (!endpoint) {
+        throw new Error('Endpoint is required');
+      }
+
       const accessToken = await this.authService.refreshToken(userId);
 
       const response = await fetch(endpoint, {
@@ -131,13 +135,18 @@ export class SpotifyService {
       });
 
       if (!response.ok) {
-        throw new UnauthorizedException('Failed to add to queue');
+        const error = await response.json();
+        throw new UnauthorizedException(
+          error.error?.message || 'Failed to add to queue',
+        );
       }
 
-      return response;
+      return { success: true };
     } catch (error) {
       console.error('Error adding to queue:', error);
-      throw error;
+      throw new UnauthorizedException(
+        error.message || 'Failed to add to queue',
+      );
     }
   }
 
