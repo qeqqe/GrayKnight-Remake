@@ -1,7 +1,7 @@
 import { spotifyTrack } from "@/lib/types";
 import { Music2 } from "lucide-react";
-import TrackCard from "./TrackCard";
 import { useSpotifyPolling } from "@/hooks/useSpotifyPolling";
+import TrackCard from "./TrackCard";
 
 export const CurrentlyPlaying = ({
   track: initialTrack,

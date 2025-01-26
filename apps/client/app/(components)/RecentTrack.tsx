@@ -62,14 +62,15 @@ function RecentlyPlayed() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScrollArea className="h-[400px] pr-4">
+      <ScrollArea className="h-[300px] sm:h-[400px] pr-4">
         <div className="flex flex-col gap-2">
           {items.map((item) => (
             <div
               key={`${item.track.id}-${item.played_at}`}
-              className="group flex items-center gap-4 p-3 rounded-lg transition-colors hover:bg-zinc-800/50 bg-zinc-900/20"
+              className="group flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg transition-colors hover:bg-zinc-800/50 bg-zinc-900/20"
             >
-              <div className="relative aspect-square h-12 w-12 overflow-hidden rounded">
+              {/* Update layout for better mobile display */}
+              <div className="relative aspect-square h-10 w-10 sm:h-12 sm:w-12 overflow-hidden rounded">
                 <Image
                   src={item.track.album.images[2]?.url || "/placeholder.png"}
                   alt={item.track.album.name}

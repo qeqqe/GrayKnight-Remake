@@ -33,12 +33,12 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  Info,
-  Heart,
   Repeat,
   Volume2,
   VolumeX,
   Shuffle,
+  Info,
+  Heart,
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -542,10 +542,49 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     }
   };
 
+  // Update the track info section with better layout and added info button
+  const trackInfoSection = (
+    <div className="flex items-center justify-between">
+      <div className="flex-1 min-w-0">
+        <h3 className="text-xl font-bold truncate">{track.name}</h3>
+        <p className="text-zinc-400 truncate">
+          {track.artists.map((a) => a.name).join(", ")}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 ml-4">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setIsModalOpen(true)}
+          className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/10"
+        >
+          <Info className="h-4 w-4" />
+          <span className="sr-only">Track Details</span>
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleSaveTrack}
+          className={`h-8 w-8 ${
+            isSaved ? "text-green-500" : "text-zinc-400"
+          } hover:text-white hover:bg-white/10`}
+        >
+          <Heart
+            className={`h-4 w-4 ${isSaved ? "fill-current" : "stroke-current"}`}
+          />
+          <span className="sr-only">
+            {isSaved ? "Remove from Library" : "Save to Library"}
+          </span>
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col">
-      <div className="flex gap-6">
-        <div className="relative w-32 h-32">
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Album Art */}
+        <div className="relative w-32 h-32 md:w-48 md:h-48 mx-auto md:mx-0">
           <TrackArtwork
             imageUrl={track?.album?.images?.[0]?.url}
             albumName={track?.album?.name}
@@ -553,126 +592,153 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
           />
         </div>
 
-        <div className="flex-1 flex flex-col justify-between min-w-0">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-xl text-zinc-200 dark:text-white truncate">
-                  {track.name}
-                </h3>
-                {track.explicit && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded">
-                    E
-                  </span>
-                )}
-              </div>
-              <p className="text-base text-zinc-600 dark:text-zinc-400 truncate">
-                {track.artists.map((artist) => artist.name).join(", ")}
-              </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
-                {track.album.name}
-              </p>
-            </div>
-            <div className="flex gap-2">
+        {/* Controls and Info */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {trackInfoSection}
+
+          {/* Playback Controls - Different layouts for mobile/desktop */}
+          <div className="md:hidden flex flex-col gap-4">
+            {/* Mobile Layout - Centered */}
+            <div className="flex justify-center items-center gap-4">
               <Button
-                size="icon"
+                size="sm"
                 variant="ghost"
-                className={`w-8 h-8 ${
-                  isSaved
-                    ? "text-red-500 hover:text-red-600"
-                    : "text-zinc-500 hover:text-red-500"
-                }`}
-                onClick={handleSaveTrack}
+                onClick={handlePrevious}
+                className="text-zinc-400 hover:text-white"
               >
-                <Heart
-                  className="w-4 h-4"
-                  fill={isSaved ? "currentColor" : "none"}
-                />
+                <SkipBack className="h-5 w-5" />
               </Button>
               <Button
                 size="icon"
-                variant="ghost"
-                className="w-8 h-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handlePlayPause}
+                className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12"
               >
-                <Info className="w-4 h-4" />
+                {localPlayingState ? (
+                  <Pause className="h-5 w-5" />
+                ) : (
+                  <Play className="h-5 w-5" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleNext}
+                className="text-zinc-400 hover:text-white"
+              >
+                <SkipForward className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Mobile Secondary Controls */}
+            <div className="flex justify-center items-center gap-4">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRepeatClick}
+                className={`text-zinc-400 hover:text-white ${
+                  repeatMode !== "off" ? "text-green-500" : ""
+                }`}
+              >
+                <div className="relative">
+                  <Repeat className="h-4 w-4" />
+                  {repeatMode === "track" && (
+                    <span className="absolute -top-1 -right-1 text-[10px] font-bold">
+                      1
+                    </span>
+                  )}
+                </div>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleShuffleClick}
+                className={`text-zinc-400 hover:text-white ${
+                  shuffleEnabled ? "text-green-500" : ""
+                }`}
+              >
+                <Shuffle className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* playback controls */}
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handlePrevious}
-              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            >
-              <SkipBack className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              onClick={handlePlayPause}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-10 h-10"
-            >
-              {localPlayingState ? (
-                <Pause className="w-5 h-5" />
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleNext}
-              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            >
-              <SkipForward className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRepeatClick}
-              className={`text-zinc-600 hover:text-zinc-900 dark:hover:text-white transition-colors ${
-                repeatMode !== "off"
-                  ? "text-green-500 dark:text-green-400"
-                  : "dark:text-zinc-400"
-              }`}
-            >
-              <div className="relative">
-                <Repeat className="w-4 h-4" />
-                {repeatMode === "track" && (
-                  <span className="absolute -top-1 -right-1 text-[10px] font-bold">
-                    1
-                  </span>
+          {/* Desktop Layout - Left aligned */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handlePrevious}
+                className="text-zinc-400 hover:text-white"
+              >
+                <SkipBack className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                onClick={handlePlayPause}
+                className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12"
+              >
+                {localPlayingState ? (
+                  <Pause className="h-5 w-5" />
+                ) : (
+                  <Play className="h-5 w-5" />
                 )}
-              </div>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleShuffleClick}
-              className={`text-zinc-600 hover:text-zinc-900 dark:hover:text-white transition-colors ${
-                shuffleEnabled
-                  ? "text-green-500 dark:text-green-400"
-                  : "dark:text-zinc-400"
-              }`}
-            >
-              <Shuffle className="w-4 h-4" />
-            </Button>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleNext}
+                className="text-zinc-400 hover:text-white"
+              >
+                <SkipForward className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRepeatClick}
+                className={`text-zinc-400 hover:text-white ${
+                  repeatMode !== "off" ? "text-green-500" : ""
+                }`}
+              >
+                <div className="relative">
+                  <Repeat className="h-4 w-4" />
+                  {repeatMode === "track" && (
+                    <span className="absolute -top-1 -right-1 text-[10px] font-bold">
+                      1
+                    </span>
+                  )}
+                </div>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleShuffleClick}
+                className={`text-zinc-400 hover:text-white ${
+                  shuffleEnabled ? "text-green-500" : ""
+                }`}
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Volume Control */}
+          <div className="hidden md:flex items-center gap-2 w-full max-w-[200px]">
             <Button
               size="sm"
               variant="ghost"
               onClick={toggleMute}
-              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+              className="text-zinc-400 hover:text-white"
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-4 h-4" />
+                <VolumeX className="h-4 w-4" />
               ) : (
-                <Volume2 className="w-4 h-4" />
+                <Volume2 className="h-4 w-4" />
               )}
             </Button>
-            <div className="w-32">
+            <div className="flex-1">
               <ElasticSlider
                 defaultValue={volume}
                 startingValue={0}
@@ -680,12 +746,10 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
                 isStepped={true}
                 stepSize={5}
                 className="volume-slider"
-                leftIcon={<VolumeX className="w-3 h-3 text-zinc-400" />}
-                rightIcon={<Volume2 className="w-3 h-3 text-zinc-400" />}
                 onChange={handleVolumeChange}
               />
             </div>
-            <span className="text-xs text-zinc-400 text-[0.75rem] font-medium tracking-tighter min-w-[2rem]">
+            <span className="text-xs text-zinc-400 w-8 text-right">
               {volume}%
             </span>
           </div>
