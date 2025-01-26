@@ -488,3 +488,15 @@ export const fetchRecentlyPlayed = async (
     throw error;
   }
 };
+
+export async function playTrackThroughQueue(uri: string) {
+  try {
+    // First add to queue
+    await addToQueue(uri);
+    // Then skip to next track (which will be our queued track)
+    await nextSpotifyTrack();
+  } catch (error) {
+    console.error("Failed to play track through queue:", error);
+    throw error;
+  }
+}

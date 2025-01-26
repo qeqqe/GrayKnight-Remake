@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { formatDistance } from "date-fns";
 import { RecentlyPlayedItem, RecentlyPlayedResponse } from "@/lib/types/index";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { playSpotifyTrack, fetchRecentlyPlayed } from "@/lib/spotify/spotify";
+import {
+  fetchRecentlyPlayed,
+  playTrackThroughQueue,
+} from "@/lib/spotify/spotify";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Loader2, Play } from "lucide-react";
@@ -52,9 +55,7 @@ function RecentlyPlayed() {
   const handlePlay = async (trackId: string, e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      await playSpotifyTrack({
-        uris: [`spotify:track:${trackId}`],
-      });
+      await playTrackThroughQueue(`spotify:track:${trackId}`);
     } catch (error) {
       console.error("Failed to play track:", error);
     }

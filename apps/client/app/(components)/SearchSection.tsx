@@ -17,8 +17,8 @@ import {
 } from "@/lib/types";
 import {
   searchSpotify,
-  playSpotifyTrack,
   addToQueue,
+  playTrackThroughQueue,
 } from "@/lib/spotify/spotify";
 import AlbumDialog from "./dialogs/AlbumDialog";
 import PlaylistDialog from "./dialogs/PlaylistDialog";
@@ -75,7 +75,7 @@ const SearchSection = () => {
 
   const handlePlay = async (track: spotifyTrack) => {
     try {
-      await playSpotifyTrack({ uris: [track.uri] });
+      await playTrackThroughQueue(track.uri);
     } catch (error) {
       console.error("Failed to play track:", error);
     }
