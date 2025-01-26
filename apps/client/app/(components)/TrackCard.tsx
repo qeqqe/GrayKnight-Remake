@@ -88,6 +88,9 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
   const [isMuted, setIsMuted] = useState(false);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [prevTrackId, setPrevTrackId] = useState(track.id);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [lastSyncTime, setLastSyncTime] = useState(Date.now());
+  const [isPollingPaused, setIsPollingPaused] = useState(false);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000)
@@ -106,30 +109,8 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     ? (currentProgress / track.duration_ms) * 100
     : 0;
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (localPlayingState && currentProgress < track.duration_ms) {
-      intervalId = setInterval(() => {
-        setCurrentProgress((prev) => {
-          if (prev >= track.duration_ms) {
-            clearInterval(intervalId);
-            return track.duration_ms;
-          }
-          return prev + 1000;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [localPlayingState, track.duration_ms, currentProgress]);
-
   const checkCurrentTrack = useCallback(async () => {
-    if (!isActive) return;
+    if (!isActive || isPollingPaused) return;
 
     try {
       const token = localStorage.getItem("token");
@@ -147,10 +128,9 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
         if (data && data.item) {
           if (data.item.id === track.id) {
             setLocalPlayingState(data.is_playing);
-            // only update progress if the difference is significant
+            // Only update progress if difference is very significant (> 5 seconds)
             const progressDiff = Math.abs(data.progress_ms - currentProgress);
-            if (progressDiff > 2000) {
-              // If difference is more than 2 seconds
+            if (progressDiff > 5000) {
               setCurrentProgress(data.progress_ms);
             }
           } else {
@@ -163,37 +143,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     } catch (error) {
       console.error("Failed to check current track:", error);
     }
-  }, [track.id, currentProgress, isActive]);
-
-  useEffect(() => {
-    let progressInterval: NodeJS.Timeout | null = null;
-    let syncInterval: NodeJS.Timeout | null = null;
-
-    if (localPlayingState && currentProgress < track.duration_ms) {
-      progressInterval = setInterval(() => {
-        setCurrentProgress((prev) => {
-          if (prev >= track.duration_ms) {
-            if (progressInterval) clearInterval(progressInterval);
-            return track.duration_ms;
-          }
-          return prev + 1000;
-        });
-      }, 1000);
-
-      // Sync with Spotify every 7 sec
-      syncInterval = setInterval(checkCurrentTrack, 7000);
-    }
-
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-      if (syncInterval) clearInterval(syncInterval);
-    };
-  }, [
-    localPlayingState,
-    track.duration_ms,
-    checkCurrentTrack,
-    currentProgress,
-  ]);
+  }, [track.id, currentProgress, isActive, isPollingPaused]);
 
   useEffect(() => {
     setIsActive(true);
@@ -209,7 +159,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
 
   // add polling for track state changes
   useEffect(() => {
-    const pollInterval = setInterval(checkCurrentTrack, 5000);
+    const pollInterval = setInterval(checkCurrentTrack, 15000);
     return () => clearInterval(pollInterval);
   }, [checkCurrentTrack]);
 
@@ -223,33 +173,6 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     setLocalPlayingState(track.is_playing);
     setCurrentProgress(track.progress_ms);
   }, [track.id, track.is_playing, track.progress_ms]);
-
-  // more frequent progress updates for smoother UI
-  useEffect(() => {
-    let progressInterval: NodeJS.Timeout | null = null;
-
-    if (localPlayingState) {
-      progressInterval = setInterval(() => {
-        setCurrentProgress((prev) => {
-          if (prev >= track.duration_ms) {
-            if (progressInterval) clearInterval(progressInterval);
-            return track.duration_ms;
-          }
-          return prev + 100; // Update every 100ms for smoother progress
-        });
-      }, 100);
-    }
-
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-    };
-  }, [localPlayingState, track.duration_ms]);
-
-  // remove or modify slower polling intervals
-  useEffect(() => {
-    const pollInterval = setInterval(checkCurrentTrack, 1000);
-    return () => clearInterval(pollInterval);
-  }, [checkCurrentTrack]);
 
   useEffect(() => {
     if (prevTrackId !== track.id) {
@@ -406,10 +329,14 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     const positionMs = Math.floor(percentage * track.duration_ms);
 
     try {
+      setIsPollingPaused(true);
       await seekToPosition(positionMs);
       setCurrentProgress(positionMs);
+      setLastSyncTime(Date.now());
+      setTimeout(() => setIsPollingPaused(false), 1000);
     } catch (error) {
       console.error("Failed to seek:", error);
+      setIsPollingPaused(false);
     }
   };
 
@@ -432,30 +359,13 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
     if (!isDragging) {
       setHoverProgress(null);
       setShowPreview(false);
+      setIsPollingPaused(false);
     }
   };
 
-  useEffect(() => {
-    let progressInterval: NodeJS.Timeout | null = null;
-    let lastUpdate = Date.now();
-
-    if (localPlayingState && currentProgress < track.duration_ms) {
-      progressInterval = setInterval(() => {
-        const now = Date.now();
-        const delta = now - lastUpdate;
-        lastUpdate = now;
-
-        setCurrentProgress((prev) => {
-          const next = prev + delta;
-          return next >= track.duration_ms ? track.duration_ms : next;
-        });
-      }, 50);
-    }
-
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-    };
-  }, [localPlayingState, track.duration_ms, currentProgress]);
+  const handleProgressBarMouseEnter = () => {
+    setIsPollingPaused(true);
+  };
 
   const handleRepeatClick = async () => {
     try {
@@ -579,6 +489,39 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
       </div>
     </div>
   );
+
+  useEffect(() => {
+    setCurrentProgress(track.progress_ms);
+    setLocalPlayingState(track.is_playing);
+
+    // reset animation frame
+    let animationFrameId: number;
+    const startTime = performance.now() - track.progress_ms;
+
+    const animate = (currentTime: number) => {
+      if (!track.is_playing) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      const elapsed = currentTime - startTime;
+      const newProgress = Math.min(elapsed, track.duration_ms);
+
+      setCurrentProgress(newProgress);
+
+      if (newProgress < track.duration_ms) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [track.id, track.progress_ms, track.is_playing, track.duration_ms]);
 
   return (
     <div className="h-full flex flex-col">
@@ -763,6 +706,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
           onClick={handleProgressBarClick}
           onMouseMove={handleProgressBarMouseMove}
           onMouseLeave={handleProgressBarMouseLeave}
+          onMouseEnter={handleProgressBarMouseEnter}
         >
           <div className="w-full h-1.5 relative bg-zinc-200/10 rounded-full overflow-visible hover:h-[6px] transition-all duration-100">
             {/* base track */}

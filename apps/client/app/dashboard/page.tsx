@@ -161,13 +161,13 @@ const Page = () => {
   const NavContent = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-4 px-2">
-        <div className="relative h-12 w-12">
+        <div className="relative h-12 w-12 mt-4">
           {user.profileUrl ? (
             <Image
               src={user.profileUrl}
               alt={user.displayName || "User avatar"}
-              width={48}
-              height={48}
+              width={96}
+              height={96}
               className="rounded-full ring-2 ring-white/10 hover:ring-white/20 transition-all"
               onError={(e) => {
                 e.currentTarget.src = DEFAULT_AVATAR;
@@ -182,7 +182,7 @@ const Page = () => {
               className="rounded-full ring-2 ring-white/10"
             />
           )}
-          <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-green-500 ring-2 ring-zinc-900" />
+          <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-green-500 ring-2 ring-zinc-900 -translate-y-4" />
         </div>
         <div className="min-w-0">
           <h2 className="font-semibold text-white truncate">
