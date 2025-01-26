@@ -22,8 +22,8 @@ model User {
   country     String?
 
   // authentication & tokens
-  accessToken  String
-  refreshToken String
+  accessToken  String    @db.Text
+  refreshToken String    @db.Text
   tokenExpiry  DateTime?
 
   // relationships

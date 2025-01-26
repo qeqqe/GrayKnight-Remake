@@ -84,6 +84,7 @@ const Page = () => {
       const tokenExpiry = localStorage.getItem("tokenExpiry");
 
       if (!token || (tokenExpiry && Date.now() > parseInt(tokenExpiry))) {
+        console.log("Token missing or expired, redirecting to login");
         localStorage.removeItem("token");
         localStorage.removeItem("tokenExpiry");
         router.push("/");
@@ -101,17 +102,41 @@ const Page = () => {
         );
 
         if (!response.ok) {
+          console.log("User data fetch failed:", response.status);
+          if (response.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("tokenExpiry");
+            router.push("/");
+            return;
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const userData = await response.json();
+        console.log("User data fetched successfully:", userData);
         setUser(userData);
 
-        // initial current track fetch
-        await currentPlaying();
+        const pollCurrentTrack = async () => {
+          try {
+            await currentPlaying();
+          } catch (error) {
+            console.error("Polling error:", error);
+            if (
+              error &&
+              typeof error === "object" &&
+              "status" in error &&
+              error.status === 401
+            ) {
+              localStorage.removeItem("token");
+              localStorage.removeItem("tokenExpiry");
+              router.push("/");
+            }
+          }
+        };
 
-        // setup polling with cleanup
-        const interval = setInterval(currentPlaying, 30000);
+        await pollCurrentTrack();
+
+        const interval = setInterval(pollCurrentTrack, 30000);
         return () => clearInterval(interval);
       } catch (error) {
         console.error("Error in fetchUserData:", error);

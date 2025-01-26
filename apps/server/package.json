@@ -27,6 +27,7 @@
     "@nestjs/passport": "^11.0.4",
     "@nestjs/platform-express": "^10.0.0",
     "@prisma/client": "^6.2.1",
+    "argon2": "^0.41.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-spotify": "^2.0.0",
