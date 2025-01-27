@@ -9,6 +9,12 @@ import { useEffect, useState, useMemo } from "react";
 import { fetchTopGenere, fetchTotalTracks } from "@/lib/spotify/spotify";
 import { TrackPlayInterface } from "@/lib/types/index";
 import { useRouter } from "next/navigation";
+import { Switch } from "@/components/ui/switch";
+import {
+  toggleOfflineTracking,
+  getOfflineTrackingStatus,
+} from "@/lib/spotify/spotify";
+
 interface OverviewProps {
   currentTrack: spotifyTrack | null;
 }
@@ -22,7 +28,9 @@ export function Overview({ currentTrack }: OverviewProps) {
   const [TopGenres, setTopGenres] = useState<TopGenreResponse[]>([]);
   const [totalTime, setTotalTime] = useState<number>(0);
   const [topGenre, setTopGenre] = useState<string>("N/A");
+  const [offlineTrackingEnabled, setOfflineTrackingEnabled] = useState(false);
   const router = useRouter();
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -48,6 +56,18 @@ export function Overview({ currentTrack }: OverviewProps) {
     fetchData();
   }, [router]);
 
+  useEffect(() => {
+    async function checkOfflineTracking() {
+      try {
+        const status = await getOfflineTrackingStatus();
+        setOfflineTrackingEnabled(status);
+      } catch (error) {
+        console.error("Failed to check offline tracking status:", error);
+      }
+    }
+    checkOfflineTracking();
+  }, []);
+
   useMemo(() => {
     if (listeningData) {
       setTotalTrackLength(listeningData.length);
@@ -63,6 +83,15 @@ export function Overview({ currentTrack }: OverviewProps) {
       setTotalTime(totalHours);
     }
   }, [listeningData]);
+
+  const handleOfflineTrackingToggle = async () => {
+    try {
+      await toggleOfflineTracking(!offlineTrackingEnabled);
+      setOfflineTrackingEnabled(!offlineTrackingEnabled);
+    } catch (error) {
+      console.error("Failed to toggle offline tracking:", error);
+    }
+  };
 
   const stats = useMemo(
     () => [
@@ -83,6 +112,22 @@ export function Overview({ currentTrack }: OverviewProps) {
       },
     ],
     [totalTrackLength, totalTime, topGenre]
+  );
+
+  const offlineTrackingToggle = (
+    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+      <div>
+        <h3 className="font-medium">Offline Tracking</h3>
+        <p className="text-sm text-zinc-400">
+          Track your listening history even when you&apos;re not on the website
+        </p>
+      </div>
+      <Switch
+        checked={offlineTrackingEnabled}
+        onCheckedChange={handleOfflineTrackingToggle}
+        className="data-[state=checked]:bg-green-500"
+      />
+    </div>
   );
 
   return (
@@ -108,6 +153,8 @@ export function Overview({ currentTrack }: OverviewProps) {
           </div>
         ))}
       </div>
+
+      {offlineTrackingToggle}
 
       <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
         <SplitText

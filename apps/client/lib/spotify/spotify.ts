@@ -555,3 +555,57 @@ export async function fetchTopGenere() {
     throw error;
   }
 }
+
+export async function toggleOfflineTracking(enable: boolean) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const endpoint = enable ? "enable" : "disable";
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/offline-spotify/${endpoint}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to toggle offline tracking");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error toggling offline tracking:", error);
+    throw error;
+  }
+}
+
+export async function getOfflineTrackingStatus() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/offline-spotify/stats`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to get offline tracking status");
+    }
+
+    const data = await response.json();
+    return data.isEnabled;
+  } catch (error) {
+    console.error("Error getting offline tracking status:", error);
+    throw error;
+  }
+}

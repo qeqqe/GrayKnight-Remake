@@ -42,6 +42,8 @@ model User {
   // Artist genere cache
   ArtistGenreCache ArtistGenreCache[]
 
+  offlineTrackingEnabled Boolean @default(false)
+
   @@index([createdAt])
 }
 
