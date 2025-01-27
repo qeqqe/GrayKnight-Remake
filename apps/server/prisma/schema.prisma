@@ -220,7 +220,7 @@ model TrackPlay {
 
 model ArtistGenreCache {
   id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   artistId  String
   genres    String[]
