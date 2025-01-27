@@ -1,13 +1,14 @@
 "use client";
 
 import { Music2, BarChart3, Clock } from "lucide-react";
-import { spotifyTrack } from "@/lib/types";
+import { TopGenreResponse, spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
 import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
 import RecentTrack from "@/app/(components)/RecentTrack";
 import { useEffect, useState, useMemo } from "react";
-import { fetchTotalTracks } from "@/lib/spotify/spotify";
+import { fetchTopGenere, fetchTotalTracks } from "@/lib/spotify/spotify";
 import { TrackPlayInterface } from "@/lib/types/index";
+import { useRouter } from "next/navigation";
 interface OverviewProps {
   currentTrack: spotifyTrack | null;
 }
@@ -17,8 +18,11 @@ export function Overview({ currentTrack }: OverviewProps) {
   const [listeningData, setListeningData] = useState<
     TrackPlayInterface[] | null
   >(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [TopGenres, setTopGenres] = useState<TopGenreResponse[]>([]);
   const [totalTime, setTotalTime] = useState<number>(0);
-
+  const [topGenre, setTopGenre] = useState<string>("N/A");
+  const router = useRouter();
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -29,8 +33,20 @@ export function Overview({ currentTrack }: OverviewProps) {
       }
     };
 
+    const fetchTopGenres = async () => {
+      try {
+        const data = await fetchTopGenere();
+        if (data && data.length > 0) {
+          setTopGenre(data[0].genre);
+        }
+      } catch (error) {
+        console.error("Error fetching top genres:", error);
+      }
+    };
+
+    fetchTopGenres();
     fetchData();
-  }, []);
+  }, [router]);
 
   useMemo(() => {
     if (listeningData) {
@@ -62,11 +78,11 @@ export function Overview({ currentTrack }: OverviewProps) {
       },
       {
         label: "Top Genre",
-        value: "Rock",
+        value: topGenre,
         icon: <BarChart3 className="w-5 h-5" />,
       },
     ],
-    [totalTrackLength, totalTime]
+    [totalTrackLength, totalTime, topGenre]
   );
 
   return (

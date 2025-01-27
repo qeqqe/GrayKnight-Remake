@@ -532,3 +532,26 @@ export async function fetchTotalTracks() {
     throw error;
   }
 }
+
+export async function fetchTopGenere() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No Spotify access token found");
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/top-genres`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch top genres");
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch top genres:", error);
+    throw error;
+  }
+}

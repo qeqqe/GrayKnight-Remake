@@ -745,71 +745,85 @@ export class SpotifyService {
     userId: string,
   ): Promise<string[]> {
     try {
-      // Check cache first
-      const cached = await this.prisma.artistGenreCache.findUnique({
-        where: { artistId },
+      const cached = await this.prisma.artistGenreCache.findFirst({
+        where: {
+          artistId,
+          userId,
+        },
       });
 
-      // If cache is fresh (less than 24 hours old), use it
       if (
         cached &&
         cached.updatedAt > new Date(Date.now() - 24 * 60 * 60 * 1000)
       ) {
+        await this.prisma.artistGenreCache.update({
+          where: { id: cached.id },
+          data: {
+            playCount: { increment: 1 },
+          },
+        });
         return cached.genres;
       }
 
-      // Fetch fresh data
       const artistData = await this.getArtistDetails(userId, artistId);
+      const cleanedGenres =
+        artistData.genres?.map((genre) =>
+          genre
+            .trim()
+            .toLowerCase()
+            .replace(/["[\]]/g, ''),
+        ) || [];
 
-      // Update cache
-      await this.prisma.artistGenreCache.upsert({
-        where: { artistId },
+      const result = await this.prisma.artistGenreCache.upsert({
+        where: {
+          artistId: artistId,
+          userId: userId,
+        },
         create: {
           artistId,
-          genres: artistData.genres || [],
+          userId,
+          genres: cleanedGenres,
+          playCount: 1,
         },
         update: {
-          genres: artistData.genres || [],
+          genres: cleanedGenres,
+          playCount: { increment: 1 },
+          updatedAt: new Date(),
         },
       });
 
-      return artistData.genres || [];
+      return result.genres;
     } catch (error) {
-      console.error('Error caching artist genres:', error);
+      this.logger.error('Error caching artist genres:', error);
       return [];
     }
   }
 
   async trackPlayEvent(userId: string, trackData: any, context?: any) {
     try {
-      // first check if this track was recently scrobbled (within last 30 seconds)
+      // Check for recent play
       const recentPlay = await this.prisma.trackPlay.findFirst({
         where: {
           userId,
           trackId: trackData.id,
           timestamp: {
-            gte: new Date(Date.now() - 30000),
+            gte: new Date(Date.now() - 30000), // 30 seconds ago
           },
         },
       });
 
       if (recentPlay) {
-        console.log('Track recently scrobbled, skipping');
+        this.logger.log('Track recently scrobbled, skipping');
         return;
       }
 
+      // Process genres and update cache for each artist
       const genrePromises = trackData.artists.map((artist) =>
         this.cacheArtistGenres(artist.id, userId),
       );
-      const artistGenres = await Promise.all(genrePromises);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const uniqueGenres = [...new Set(artistGenres.flat())];
+      await Promise.all(genrePromises);
 
-      const currentState = this.activePlaybackStates.get(userId);
-      const playedDuration = currentState
-        ? currentState.lastProgress
-        : trackData.duration_ms;
-
+      // Create track play record
       await this.prisma.trackPlay.create({
         data: {
           userId,
@@ -819,7 +833,9 @@ export class SpotifyService {
           artistNames: trackData.artists.map((a) => a.name),
           albumName: trackData.album.name,
           durationMs: trackData.duration_ms,
-          playedDurationMs: playedDuration,
+          playedDurationMs:
+            this.activePlaybackStates.get(userId)?.lastProgress ||
+            trackData.duration_ms,
           popularity: trackData.popularity,
           contextType: context?.type,
           contextUri: context?.uri,
@@ -827,7 +843,7 @@ export class SpotifyService {
         },
       });
     } catch (error) {
-      console.error('Error recording track play:', error);
+      this.logger.error('Error recording track play:', error);
       throw error;
     }
   }
@@ -847,6 +863,60 @@ export class SpotifyService {
       return response;
     } catch (error) {
       console.error('Error recording track play:', error);
+      throw error;
+    }
+  }
+
+  async topGenres(userId: string) {
+    try {
+      const genreCaches = await this.prisma.artistGenreCache.findMany({
+        where: {
+          userId: userId,
+        },
+        select: {
+          genres: true,
+          playCount: true,
+        },
+        orderBy: {
+          playCount: 'desc',
+        },
+      });
+
+      const genreFrequencyMap = new Map<string, number>();
+
+      genreCaches.forEach((cache) => {
+        if (cache.genres && Array.isArray(cache.genres)) {
+          cache.genres.forEach((genre) => {
+            const cleanGenre = genre
+              .trim()
+              .toLowerCase()
+              .replace(/["[\]]/g, '');
+            if (cleanGenre) {
+              const currentCount = genreFrequencyMap.get(cleanGenre) || 0;
+              genreFrequencyMap.set(
+                cleanGenre,
+                currentCount + (cache.playCount || 1),
+              );
+            }
+          });
+        }
+      });
+
+      const sortedGenres = Array.from(genreFrequencyMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([genre, count]) => ({
+          genre: genre
+            .split(' ')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
+          count,
+        }))
+        .slice(0, 10);
+
+      this.logger.log(`Top genres calculated: ${JSON.stringify(sortedGenres)}`);
+      return sortedGenres;
+    } catch (error) {
+      this.logger.error('Error getting top genres:', error);
       throw error;
     }
   }

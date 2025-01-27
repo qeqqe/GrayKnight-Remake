@@ -38,6 +38,11 @@ model User {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   TrackPlay TrackPlay[]
+
+  // Artist genere cache
+  ArtistGenreCache ArtistGenreCache[]
+
+  @@index([createdAt])
 }
 
 // track listening history
@@ -213,9 +218,14 @@ model TrackPlay {
 
 model ArtistGenreCache {
   id        String   @id @default(cuid())
-  artistId  String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  artistId  String
   genres    String[]
+  playCount Int      @default(0)
   updatedAt DateTime @updatedAt
 
+  @@unique([artistId, userId])
   @@index([artistId])
+  @@index([userId])
 }

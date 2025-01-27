@@ -321,3 +321,21 @@ export interface TrackPlayInterface {
   playedDurationMs?: number;
   skipped: boolean;
 }
+
+export interface GenreWithCount {
+  genre: string;
+  count: number;
+}
+
+export interface ArtistGenreCacheInterface {
+  id: string;
+  artistId: string;
+  genres: string[];
+  playCount: number;
+  updatedAt: string;
+}
+
+export interface TopGenreResponse {
+  genre: string;
+  count: number;
+}

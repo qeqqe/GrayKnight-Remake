@@ -223,4 +223,10 @@ export class SpotifyController {
   async getTotalTracks(@Req() req) {
     return this.spotifyService.totalTracks(req.user.id);
   }
+
+  @Get('top-genres')
+  @UseGuards(JwtAuthGuard)
+  async getTopGenres(@Req() req) {
+    return this.spotifyService.topGenres(req.user.id);
+  }
 }
