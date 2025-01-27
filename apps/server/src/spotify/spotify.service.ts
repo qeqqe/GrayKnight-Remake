@@ -747,8 +747,7 @@ export class SpotifyService {
     try {
       const cached = await this.prisma.artistGenreCache.findFirst({
         where: {
-          artistId,
-          userId,
+          AND: [{ artistId }, { userId }],
         },
       });
 
@@ -776,8 +775,7 @@ export class SpotifyService {
 
       const result = await this.prisma.artistGenreCache.upsert({
         where: {
-          artistId: artistId,
-          userId: userId,
+          id: cached?.id || 'temp-id',
         },
         create: {
           artistId,
