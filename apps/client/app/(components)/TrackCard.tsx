@@ -159,7 +159,7 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
 
   // add polling for track state changes
   useEffect(() => {
-    const pollInterval = setInterval(checkCurrentTrack, 15000);
+    const pollInterval = setInterval(checkCurrentTrack, 10000); // Poll every 10 seconds
     return () => clearInterval(pollInterval);
   }, [checkCurrentTrack]);
 
@@ -179,8 +179,6 @@ function TrackCardContent({ track }: { track: TrackWithRequiredAlbum }) {
       setPrevTrackId(track.id);
     }
   }, [track.id, prevTrackId]);
-
-  console.log("Track in card:", track);
 
   const handlePlayPause = async (e: React.MouseEvent) => {
     e.preventDefault();

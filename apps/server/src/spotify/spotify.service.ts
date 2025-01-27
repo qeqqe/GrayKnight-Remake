@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthService } from 'src/auth/auth.service';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
@@ -6,6 +6,16 @@ import { RateLimiterMemory } from 'rate-limiter-flexible';
 @Injectable()
 export class SpotifyService {
   private volumeRateLimiter: RateLimiterMemory;
+  private activePlaybackStates = new Map<
+    string,
+    {
+      trackId: string;
+      startTime: number;
+      lastProgress: number;
+      duration: number;
+      scrobbled: boolean;
+    }
+  >();
 
   constructor(
     private prisma: PrismaService,
@@ -17,6 +27,8 @@ export class SpotifyService {
       duration: 1, // per 1 second
     });
   }
+
+  private readonly logger = new Logger(SpotifyService.name);
 
   async getUserProfile(userId: string) {
     try {
@@ -34,8 +46,6 @@ export class SpotifyService {
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
-
-      console.log('User data from database:', user);
 
       if (!user.profileUrl) {
         user.profileUrl = 'https://api.dicebear.com/7.x/avataaars/svg';
@@ -60,7 +70,6 @@ export class SpotifyService {
       },
     );
 
-    // Handle 204 No Content response
     if (response.status === 204) {
       return null;
     }
@@ -69,12 +78,57 @@ export class SpotifyService {
       throw new UnauthorizedException('Failed to fetch current track');
     }
 
-    const text = await response.text(); // Get response as text first
+    const text = await response.text(); // get response as text first
     try {
-      return text ? JSON.parse(text) : null; // Parse if there's content
+      const data = text ? JSON.parse(text) : null; // parse if there's content
+      if (data?.item) {
+        await this.handlePlaybackState(userId, data);
+      }
+      return data;
     } catch (error) {
       console.error('Error parsing response:', error);
       return null;
+    }
+  }
+
+  private async handlePlaybackState(userId: string, data: any) {
+    const currentState = this.activePlaybackStates.get(userId);
+    const currentTime = Date.now();
+
+    // if this is a new track or returning to an unfinished track
+    if (!currentState || currentState.trackId !== data.item.id) {
+      this.activePlaybackStates.set(userId, {
+        trackId: data.item.id,
+        startTime: currentTime,
+        lastProgress: data.progress_ms,
+        duration: data.item.duration_ms,
+        scrobbled: false,
+      });
+      return;
+    }
+
+    // update progress
+    const progressDiff = data.progress_ms - currentState.lastProgress;
+
+    // if progress went backwards significantly or track was seeked
+    if (progressDiff < -3000) {
+      currentState.startTime = currentTime;
+      currentState.lastProgress = data.progress_ms;
+      return;
+    }
+
+    // calculate listening progress
+    const listenedPercentage = (data.progress_ms / data.item.duration_ms) * 100;
+    const shouldScrobble = listenedPercentage >= 50 && !currentState.scrobbled;
+
+    // update state
+    currentState.lastProgress = data.progress_ms;
+
+    // if we should scrobble the track
+    if (shouldScrobble && data.is_playing) {
+      await this.trackPlayEvent(userId, data.item, data.context);
+      currentState.scrobbled = true;
+      console.log(`Scrobbled track ${data.item.name} for user ${userId}`);
     }
   }
 
@@ -665,9 +719,134 @@ export class SpotifyService {
         throw new UnauthorizedException('Failed to fetch recently played');
       }
 
-      return response.json();
+      const data = await response.json();
+
+      // Get the timestamp of the last item for the next cursor
+      const lastItem = data.items[data.items.length - 1];
+      const nextCursor = lastItem
+        ? new Date(lastItem.played_at).getTime()
+        : null;
+
+      return {
+        items: data.items,
+        cursors: {
+          after: nextCursor ? nextCursor.toString() : null,
+        },
+        next: data.items.length >= limit,
+      };
     } catch (error) {
       console.error('Error fetching recently played:', error);
+      throw error;
+    }
+  }
+
+  private async cacheArtistGenres(
+    artistId: string,
+    userId: string,
+  ): Promise<string[]> {
+    try {
+      // Check cache first
+      const cached = await this.prisma.artistGenreCache.findUnique({
+        where: { artistId },
+      });
+
+      // If cache is fresh (less than 24 hours old), use it
+      if (
+        cached &&
+        cached.updatedAt > new Date(Date.now() - 24 * 60 * 60 * 1000)
+      ) {
+        return cached.genres;
+      }
+
+      // Fetch fresh data
+      const artistData = await this.getArtistDetails(userId, artistId);
+
+      // Update cache
+      await this.prisma.artistGenreCache.upsert({
+        where: { artistId },
+        create: {
+          artistId,
+          genres: artistData.genres || [],
+        },
+        update: {
+          genres: artistData.genres || [],
+        },
+      });
+
+      return artistData.genres || [];
+    } catch (error) {
+      console.error('Error caching artist genres:', error);
+      return [];
+    }
+  }
+
+  async trackPlayEvent(userId: string, trackData: any, context?: any) {
+    try {
+      // first check if this track was recently scrobbled (within last 30 seconds)
+      const recentPlay = await this.prisma.trackPlay.findFirst({
+        where: {
+          userId,
+          trackId: trackData.id,
+          timestamp: {
+            gte: new Date(Date.now() - 30000),
+          },
+        },
+      });
+
+      if (recentPlay) {
+        console.log('Track recently scrobbled, skipping');
+        return;
+      }
+
+      const genrePromises = trackData.artists.map((artist) =>
+        this.cacheArtistGenres(artist.id, userId),
+      );
+      const artistGenres = await Promise.all(genrePromises);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const uniqueGenres = [...new Set(artistGenres.flat())];
+
+      const currentState = this.activePlaybackStates.get(userId);
+      const playedDuration = currentState
+        ? currentState.lastProgress
+        : trackData.duration_ms;
+
+      await this.prisma.trackPlay.create({
+        data: {
+          userId,
+          trackId: trackData.id,
+          trackName: trackData.name,
+          artistIds: trackData.artists.map((a) => a.id),
+          artistNames: trackData.artists.map((a) => a.name),
+          albumName: trackData.album.name,
+          durationMs: trackData.duration_ms,
+          playedDurationMs: playedDuration,
+          popularity: trackData.popularity,
+          contextType: context?.type,
+          contextUri: context?.uri,
+          timestamp: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error('Error recording track play:', error);
+      throw error;
+    }
+  }
+
+  async totalTracks(userID: string) {
+    try {
+      this.logger.log('Got a request to fetch the total Track');
+      const response = await this.prisma.trackPlay.findMany({
+        where: {
+          userId: userID,
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
+      this.logger.log(`Got the response: ${response}`);
+      return response;
+    } catch (error) {
+      console.error('Error recording track play:', error);
       throw error;
     }
   }

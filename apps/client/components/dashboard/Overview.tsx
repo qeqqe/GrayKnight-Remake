@@ -1,36 +1,78 @@
+"use client";
+
 import { Music2, BarChart3, Clock } from "lucide-react";
 import { spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
 import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
 import RecentTrack from "@/app/(components)/RecentTrack";
-
+import { useEffect, useState, useMemo } from "react";
+import { fetchTotalTracks } from "@/lib/spotify/spotify";
+import { TrackPlayInterface } from "@/lib/types/index";
 interface OverviewProps {
   currentTrack: spotifyTrack | null;
 }
 
 export function Overview({ currentTrack }: OverviewProps) {
-  const stats = [
-    {
-      label: "Monthly Tracks",
-      value: "847",
-      icon: <Music2 className="w-5 h-5" />,
-    },
-    {
-      label: "Listening Time",
-      value: "156h",
-      icon: <Clock className="w-5 h-5" />,
-    },
-    {
-      label: "Top Genre",
-      value: "Rock",
-      icon: <BarChart3 className="w-5 h-5" />,
-    },
-  ];
+  const [totalTrackLength, setTotalTrackLength] = useState<number>(0);
+  const [listeningData, setListeningData] = useState<
+    TrackPlayInterface[] | null
+  >(null);
+  const [totalTime, setTotalTime] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await fetchTotalTracks();
+        setListeningData(data);
+      } catch (error) {
+        console.error("Error fetching track data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useMemo(() => {
+    if (listeningData) {
+      setTotalTrackLength(listeningData.length);
+
+      const totalMs = listeningData.reduce(
+        (acc: number, track: TrackPlayInterface) => {
+          return acc + (track.durationMs || 0);
+        },
+        0
+      );
+
+      const totalHours = Math.round(totalMs / (1000 * 60 * 60));
+      setTotalTime(totalHours);
+    }
+  }, [listeningData]);
+
+  const stats = useMemo(
+    () => [
+      {
+        label: "Total Tracks",
+        value: totalTrackLength.toString(),
+        icon: <Music2 className="w-5 h-5" />,
+      },
+      {
+        label: "Listening Time",
+        value: `${totalTime}h`,
+        icon: <Clock className="w-5 h-5" />,
+      },
+      {
+        label: "Top Genre",
+        value: "Rock",
+        icon: <BarChart3 className="w-5 h-5" />,
+      },
+    ],
+    [totalTrackLength, totalTime]
+  );
 
   return (
     <div className="w-full space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:mt-0 sm:mt-16">
         {stats.map((stat, i) => (
           <div
             key={i}
@@ -51,7 +93,6 @@ export function Overview({ currentTrack }: OverviewProps) {
         ))}
       </div>
 
-      {/* Now Playing Section - Increased height and padding */}
       <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
         <SplitText
           text="Now playing"
@@ -67,7 +108,6 @@ export function Overview({ currentTrack }: OverviewProps) {
         </div>
       </div>
 
-      {/* Recently Played Section - Adjusted height */}
       <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">

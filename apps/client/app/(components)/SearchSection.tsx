@@ -190,7 +190,7 @@ const SearchSection = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="hover:bg-white/10 flex"
+                            className="hover:bg-white/10 flex text-zinc-400 hover:text-zinc-100"
                             onClick={() => handlePlay(track)}
                           >
                             <PlayCircle className="h-5 w-5" />
@@ -198,7 +198,7 @@ const SearchSection = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="hover:bg-white/10 flex"
+                            className="hover:bg-white/10 flex  text-green-800 hover:text-green-500"
                             onClick={() => handleAddToQueue(track.uri)}
                           >
                             <Plus className="h-5 w-5" />

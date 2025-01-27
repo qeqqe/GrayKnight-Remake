@@ -217,4 +217,10 @@ export class SpotifyController {
   ) {
     return this.spotifyService.getRecentlyPlayed(req.user.id, after, limit);
   }
+
+  @Get('total-tracks')
+  @UseGuards(JwtAuthGuard)
+  async getTotalTracks(@Req() req) {
+    return this.spotifyService.totalTracks(req.user.id);
+  }
 }

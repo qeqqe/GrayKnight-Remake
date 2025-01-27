@@ -249,7 +249,7 @@ const Page = () => {
       <div className="absolute inset-0 backdrop-blur-[100px]" />
 
       <div className="flex flex-col min-h-screen relative">
-        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg border-b border-white/10 p-4">
+        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg border-b border-white/10 p-4 ">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-bold">GrayKnight</h1>
             <Sheet>

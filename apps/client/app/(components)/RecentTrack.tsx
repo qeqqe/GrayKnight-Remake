@@ -24,31 +24,41 @@ function RecentlyPlayed() {
     try {
       setLoading(true);
       const data: RecentlyPlayedResponse = await fetchRecentlyPlayed(
-        afterCursor
+        afterCursor,
+        20
       );
 
-      if (afterCursor) {
-        setItems((prev) => [...prev, ...data.items]);
-      } else {
-        setItems(data.items);
+      if (data.items.length === 0) {
+        setHasMore(false);
+        return;
       }
 
-      setHasMore(!!data.next);
+      // combine old and new items when loading more
+      setItems((prevItems) =>
+        afterCursor ? [...prevItems, ...data.items] : data.items
+      );
+
+      setHasMore(Boolean(data.next));
       setCursor(data.cursors?.after || null);
     } catch (error) {
       console.error("Failed to fetch recently played:", error);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
   };
 
+  // reset everything when component mounts
   useEffect(() => {
+    setItems([]);
+    setCursor(null);
+    setHasMore(true);
     fetchTracks();
   }, []);
 
-  const handleLoadMore = () => {
-    if (cursor) {
-      fetchTracks(cursor);
+  const handleLoadMore = async () => {
+    if (!loading && cursor) {
+      await fetchTracks(cursor);
     }
   };
 
@@ -123,7 +133,7 @@ function RecentlyPlayed() {
             </div>
           ))}
 
-          {hasMore && (
+          {hasMore && items.length > 0 && (
             <Button
               onClick={handleLoadMore}
               disabled={loading}

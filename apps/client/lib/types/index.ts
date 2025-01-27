@@ -79,12 +79,11 @@ export interface RecentlyPlayedItem {
 
 export interface RecentlyPlayedResponse {
   items: RecentlyPlayedItem[];
-  cursors: {
-    after: string;
-    before: string;
+  cursors?: {
+    after: string | null;
+    before?: string | null;
   };
-  limit: number;
-  next: string;
+  next?: boolean;
 }
 
 export interface Artist {
@@ -302,4 +301,23 @@ export interface SpotifyPlaylistItem {
   external_urls: {
     spotify: string;
   };
+}
+
+export interface TrackPlayInterface {
+  id: string;
+  userId: string;
+  trackId: string;
+  timestamp: string;
+
+  trackName: string;
+  artistIds: string[];
+  artistNames: string[];
+  albumName: string;
+  durationMs: number;
+  popularity: number;
+
+  contextType?: string;
+  contextUri?: string;
+  playedDurationMs?: number;
+  skipped: boolean;
 }

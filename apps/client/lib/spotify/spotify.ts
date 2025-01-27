@@ -465,8 +465,8 @@ export const fetchRecentlyPlayed = async (
     }
 
     const params = new URLSearchParams({
-      ...(after && { after }),
       limit: limit.toString(),
+      ...(after && { after }),
     });
 
     const response = await fetch(
@@ -482,7 +482,8 @@ export const fetchRecentlyPlayed = async (
       throw new Error("Failed to fetch recently played tracks");
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("Failed to fetch recently played tracks:", error);
     throw error;
@@ -497,6 +498,37 @@ export async function playTrackThroughQueue(uri: string) {
     await nextSpotifyTrack();
   } catch (error) {
     console.error("Failed to play track through queue:", error);
+    throw error;
+  }
+}
+
+export async function fetchTotalTracks() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token || token === "") {
+      localStorage.clear();
+      window.location.href = "/";
+      throw new Error("Token not found");
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/total-tracks`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Couldn't fetch total tracks played");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch total tracks:", error);
     throw error;
   }
 }
