@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "deploy:db": "node prisma/cleanup-migrations.js && prisma migrate deploy",
-    "deploy:build": "npm install && npm run deploy:db && npm run build"
+    "deploy:safe": "npm install && npm run deploy:db && npm run build"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
