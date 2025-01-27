@@ -4,7 +4,12 @@ services:
     runtime: node
     region: singapore
     plan: free
-    buildCommand: npm run deploy:build
+    buildCommand: |
+      npm install
+      npx prisma generate
+      node prisma/cleanup-migrations.js
+      npx prisma migrate deploy
+      npm run build
     startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
