@@ -13,6 +13,7 @@ import {
   toggleOfflineTracking,
   getOfflineTrackingStatus,
 } from "@/lib/spotify/spotify";
+import QueueSection from "@/app/(components)/QueueSection";
 
 interface OverviewProps {
   currentTrack: spotifyTrack | null;
@@ -165,6 +166,16 @@ export function Overview({ currentTrack }: OverviewProps) {
         />
         <div className="min-h-[200px] w-full overflow-hidden">
           <CurrentlyPlaying track={currentTrack} />
+        </div>
+      </div>
+      <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
+            Upcoming
+          </h2>
+        </div>
+        <div className="overflow-hidden">
+          <QueueSection />
         </div>
       </div>
     </div>

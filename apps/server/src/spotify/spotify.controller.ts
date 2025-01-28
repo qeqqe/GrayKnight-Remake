@@ -229,4 +229,10 @@ export class SpotifyController {
   async getTopGenres(@Req() req) {
     return this.spotifyService.topGenres(req.user.id);
   }
+
+  @Get('get-queue')
+  @UseGuards(JwtAuthGuard)
+  async getQueue(@Req() req) {
+    return this.spotifyService.getQueue(req.user.id);
+  }
 }

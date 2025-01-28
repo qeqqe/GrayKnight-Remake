@@ -847,7 +847,6 @@ export class SpotifyService {
 
   async totalTracks(userID: string) {
     try {
-      this.logger.log('Got a request to fetch the total Track');
       const response = await this.prisma.trackPlay.findMany({
         where: {
           userId: userID,
@@ -914,6 +913,30 @@ export class SpotifyService {
       return sortedGenres;
     } catch (error) {
       this.logger.error('Error getting top genres:', error);
+      throw error;
+    }
+  }
+
+  async getQueue(userId: string) {
+    try {
+      const token = await this.authService.refreshToken(userId);
+      const response = await fetch(
+        'https://api.spotify.com/v1/me/player/queue',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new UnauthorizedException('Failed to fetch queue');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching queue:', error);
       throw error;
     }
   }

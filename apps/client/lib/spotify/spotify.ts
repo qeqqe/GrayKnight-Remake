@@ -609,3 +609,34 @@ export async function getOfflineTrackingStatus() {
     throw error;
   }
 }
+
+export async function fetchQueue() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token || token === "") {
+      localStorage.clear();
+      window.location.href = "/";
+      throw new Error("Token not found");
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/get-queue`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Couldn't fetch queue");
+    }
+
+    const data = await response.json();
+    return data.queue || [];
+  } catch (error) {
+    console.error("Failed to fetch queue:", error);
+    return [];
+  }
+}
