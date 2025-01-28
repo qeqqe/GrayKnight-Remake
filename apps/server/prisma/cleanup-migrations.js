@@ -4,19 +4,15 @@ import { PrismaClient } from '@prisma/client';
 async function cleanup() {
   const prisma = new PrismaClient();
   try {
-    // Only clear the failed migration state
-    await prisma.$executeRaw`DELETE FROM "_prisma_migrations" WHERE migration_name = '20250127174726_offline_mode' AND success = false;`;
+    // Delete the failed migration directly
+    await prisma.$executeRaw`DELETE FROM "_prisma_migrations" WHERE migration_name = '20250127174726_offline_mode';`;
 
-    // Don't delete data, just update null values if any exist
+    // Clean up artist genre cache
     await prisma.$executeRaw`
-      UPDATE "ArtistGenreCache" 
-      SET "userId" = (SELECT id FROM "User" LIMIT 1) 
-      WHERE "userId" IS NULL;
+      DELETE FROM "ArtistGenreCache" WHERE "userId" IS NULL;
     `;
 
-    console.log(
-      'Successfully cleaned up migration state while preserving data',
-    );
+    console.log('Successfully cleaned up migration state');
   } catch (error) {
     console.error('Error cleaning up:', error);
     process.exit(1);

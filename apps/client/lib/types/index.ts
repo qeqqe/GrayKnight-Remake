@@ -334,8 +334,3 @@ export interface ArtistGenreCacheInterface {
   playCount: number;
   updatedAt: string;
 }
-
-export interface TopGenreResponse {
-  genre: string;
-  count: number;
-}

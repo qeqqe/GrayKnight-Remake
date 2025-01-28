@@ -128,7 +128,7 @@ function RecentlyPlayed() {
                 )}
                 onClick={(e) => handlePlay(item.track.id, e)}
               >
-                <Play className="h-4 w-4" />
+                <Play className="h-4 w-4 text-white" />
               </Button>
             </div>
           ))}

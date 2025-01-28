@@ -1,10 +1,9 @@
 "use client";
 
 import { Music2, BarChart3, Clock } from "lucide-react";
-import { TopGenreResponse, spotifyTrack } from "@/lib/types";
+import { spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
 import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
-import RecentTrack from "@/app/(components)/RecentTrack";
 import { useEffect, useState, useMemo } from "react";
 import { fetchTopGenere, fetchTotalTracks } from "@/lib/spotify/spotify";
 import { TrackPlayInterface } from "@/lib/types/index";
@@ -24,8 +23,6 @@ export function Overview({ currentTrack }: OverviewProps) {
   const [listeningData, setListeningData] = useState<
     TrackPlayInterface[] | null
   >(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [TopGenres, setTopGenres] = useState<TopGenreResponse[]>([]);
   const [totalTime, setTotalTime] = useState<number>(0);
   const [topGenre, setTopGenre] = useState<string>("N/A");
   const [offlineTrackingEnabled, setOfflineTrackingEnabled] = useState(false);
@@ -168,17 +165,6 @@ export function Overview({ currentTrack }: OverviewProps) {
         />
         <div className="min-h-[200px] w-full overflow-hidden">
           <CurrentlyPlaying track={currentTrack} />
-        </div>
-      </div>
-
-      <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-            Recently Played
-          </h2>
-        </div>
-        <div className="overflow-hidden">
-          <RecentTrack />
         </div>
       </div>
     </div>

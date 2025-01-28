@@ -21,10 +21,9 @@ export class SpotifyService {
     private prisma: PrismaService,
     private authService: AuthService,
   ) {
-    // Initialize rate limiter: 1 request per second per user
     this.volumeRateLimiter = new RateLimiterMemory({
-      points: 1, // 1 request
-      duration: 1, // per 1 second
+      points: 1,
+      duration: 1,
     });
   }
 
@@ -883,12 +882,13 @@ export class SpotifyService {
       const genreFrequencyMap = new Map<string, number>();
 
       genreCaches.forEach((cache) => {
+        // Some artists don't have any generes so they must be excluded
         if (cache.genres && Array.isArray(cache.genres)) {
           cache.genres.forEach((genre) => {
             const cleanGenre = genre
               .trim()
               .toLowerCase()
-              .replace(/["[\]]/g, '');
+              .replace(/["[\]]/g, ''); // Common regex to convert ["Hip Hop","Pop"] to Hip Hop, Pop
             if (cleanGenre) {
               const currentCount = genreFrequencyMap.get(cleanGenre) || 0;
               genreFrequencyMap.set(
@@ -911,7 +911,6 @@ export class SpotifyService {
         }))
         .slice(0, 10);
 
-      this.logger.log(`Top genres calculated: ${JSON.stringify(sortedGenres)}`);
       return sortedGenres;
     } catch (error) {
       this.logger.error('Error getting top genres:', error);

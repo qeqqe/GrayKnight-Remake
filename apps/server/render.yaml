@@ -4,12 +4,7 @@ services:
     runtime: node
     region: singapore
     plan: free
-    buildCommand: |
-      npm install
-      npx prisma generate
-      node prisma/cleanup-migrations.js
-      npx prisma migrate deploy
-      npm run build
+    buildCommand: npm install && npx prisma db push --force-reset --skip-generate && npx prisma generate && npm run build
     startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV

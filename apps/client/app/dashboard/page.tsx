@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Layout,
   Library,
-  History,
+  History as HistoryIcon,
   Search,
   Smartphone,
   Menu,
@@ -20,6 +20,7 @@ import AvailableDevices from "../(components)/AvailableDevices";
 import SearchSection from "../(components)/SearchSection";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import HistorySection from "../(components)/HistorySection";
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg";
 
@@ -222,9 +223,9 @@ const Page = () => {
                 label: "Devices",
               },
               {
-                value: "history",
-                icon: <History className="w-4 h-4" />,
-                label: "History",
+                value: "recent",
+                icon: <HistoryIcon className="w-4 h-4" />,
+                label: "Recently Played",
               },
             ].map((item) => (
               <TabsTrigger
@@ -314,11 +315,15 @@ const Page = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="history" className="mt-0">
+                <TabsContent value="recent" className="mt-0">
                   <Card className="bg-white/[0.03] border-white/10">
                     <CardContent className="p-6">
-                      <h2 className="text-2xl font-bold mb-4">History</h2>
-                      {/* History content */}
+                      <p className="text-xl mb-4 lg:text-2xl font-bold bg-gradient-to-r from-white to-black text-transparent  bg-clip-text ">
+                        Recently Played
+                      </p>
+                      <div className="w-full rounded-xl bg-white/[0.03] border border-white/10 p-6 lg:p-8">
+                        <HistorySection />
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
