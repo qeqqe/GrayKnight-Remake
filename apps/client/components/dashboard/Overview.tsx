@@ -5,15 +5,16 @@ import { spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
 import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
 import { useEffect, useState, useMemo } from "react";
-import { fetchTopGenere, fetchTotalTracks } from "@/lib/spotify/spotify";
 import { TrackPlayInterface } from "@/lib/types/index";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
-import {
-  toggleOfflineTracking,
-  getOfflineTrackingStatus,
-} from "@/lib/spotify/spotify";
 import QueueSection from "@/app/(components)/QueueSection";
+import {
+  fetchTopGenere,
+  fetchTotalTracks,
+  getOfflineTrackingStatus,
+  toggleOfflineTracking,
+} from "@/lib/spotify/overview";
 
 interface OverviewProps {
   currentTrack: spotifyTrack | null;

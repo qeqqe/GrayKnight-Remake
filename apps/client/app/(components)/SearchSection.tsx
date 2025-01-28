@@ -15,15 +15,15 @@ import {
   SpotifyPlaylistItem,
   spotifyTrack,
 } from "@/lib/types";
-import {
-  searchSpotify,
-  addToQueue,
-  playTrackThroughQueue,
-} from "@/lib/spotify/spotify";
 import AlbumDialog from "./dialogs/AlbumDialog";
 import PlaylistDialog from "./dialogs/PlaylistDialog";
 import ArtistTopTrackDialog from "./dialogs/ArtistTopTrackDialog";
 import Image from "next/image";
+import {
+  addToQueue,
+  playTrackThroughQueue,
+  searchSpotify,
+} from "@/lib/spotify/search";
 
 const SearchSection = () => {
   const [query, setQuery] = useState("");

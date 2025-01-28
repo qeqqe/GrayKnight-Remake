@@ -2,13 +2,10 @@ import {
   Body,
   Controller,
   Get,
-  Post,
   Put,
   Req,
   UseGuards,
   Param,
-  Delete,
-  Query,
 } from '@nestjs/common';
 import { SpotifyService } from './spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
@@ -34,84 +31,6 @@ export class SpotifyController {
   @UseGuards(JwtAuthGuard)
   async getRecentTracks(@Req() req) {
     return this.spotifyService.getRecentTracks(req.user.id);
-  }
-
-  @Post('prev-track')
-  @UseGuards(JwtAuthGuard)
-  async prevTrack(@Req() req, @Body() body: { endpoint: string }) {
-    return this.spotifyService.prevTrack(req.user.id, body.endpoint);
-  }
-
-  @Post('add-to-queue')
-  @UseGuards(JwtAuthGuard)
-  async addToQueue(@Req() req, @Body() body: { endpoint: string }) {
-    return this.spotifyService.addToQueue(req.user.id, body.endpoint);
-  }
-
-  @Put('play-spotify-track')
-  @UseGuards(JwtAuthGuard)
-  async playTrack(
-    @Req() req,
-    @Body()
-    body: {
-      endpoint: string;
-      body: {
-        uris?: string[];
-        position_ms?: number;
-      };
-    },
-  ) {
-    return this.spotifyService.playTrack(req.user.id, body);
-  }
-
-  @Put('pause-spotify-track')
-  @UseGuards(JwtAuthGuard)
-  async pauseTrack(@Req() req, @Body() body: { endpoint: string }) {
-    return this.spotifyService.pauseTrack(req.user.id, body.endpoint);
-  }
-
-  @Post('next-spotify-track')
-  @UseGuards(JwtAuthGuard)
-  async nextTrack(@Req() req, @Body() body: { endpoint: string }) {
-    return this.spotifyService.nextTrack(req.user.id, body.endpoint);
-  }
-
-  @Get('search')
-  @UseGuards(JwtAuthGuard)
-  async search(@Req() req) {
-    const { q, type, limit, offset, market } = req.query;
-    console.log('Search request:', { q, type, limit, offset, market });
-
-    try {
-      const result = await this.spotifyService.search(req.user.id, {
-        query: q,
-        type,
-        limit: Number(limit),
-        offset: Number(offset),
-        market,
-      });
-
-      const data = await result.json();
-      console.log('Search response:', data);
-      return data;
-    } catch (error) {
-      console.error('Search error:', error);
-      throw error;
-    }
-  }
-
-  @Get('fetch-top-tracks')
-  @UseGuards(JwtAuthGuard)
-  async fetchTopTracks(@Req() req) {
-    const artistId = req.query.artistId;
-    return this.spotifyService.fetchTopTracks(req.user.id, artistId);
-  }
-
-  @Get('fetch-top-items')
-  @UseGuards(JwtAuthGuard)
-  async fetchTopItems(@Req() req) {
-    const { type, time } = req.query;
-    return this.spotifyService.fetchTopItems(req.user.id, type, time);
   }
 
   @Get('artists/:artistId')
@@ -147,92 +66,5 @@ export class SpotifyController {
       body.deviceId,
       body.volume,
     );
-  }
-
-  @Get('check-track-saved/:trackId')
-  @UseGuards(JwtAuthGuard)
-  async checkTrackSaved(@Req() req, @Param('trackId') trackId: string) {
-    return this.spotifyService.checkTrackSaved(req.user.id, trackId);
-  }
-
-  @Delete('remove-from-library/:trackId')
-  @UseGuards(JwtAuthGuard)
-  async removeFromLibrary(@Req() req, @Param('trackId') trackId: string) {
-    return this.spotifyService.removeFromLibrary(req.user.id, trackId);
-  }
-
-  @Put('save-to-library/:trackId')
-  @UseGuards(JwtAuthGuard)
-  async saveToLibrary(@Req() req, @Param('trackId') trackId: string) {
-    return this.spotifyService.saveToLibrary(req.user.id, trackId);
-  }
-
-  @Put('seek')
-  @UseGuards(JwtAuthGuard)
-  async seek(
-    @Req() req,
-    @Body() body: { position_ms: number; device_id?: string },
-  ) {
-    return this.spotifyService.seek(
-      req.user.id,
-      body.position_ms,
-      body.device_id,
-    );
-  }
-
-  @Put('set-repeat-mode')
-  @UseGuards(JwtAuthGuard)
-  async setRepeatMode(
-    @Req() req,
-    @Body() body: { state: 'track' | 'context' | 'off' },
-  ) {
-    return this.spotifyService.setRepeatMode(req.user.id, body.state);
-  }
-
-  @Put('set-volume')
-  @UseGuards(JwtAuthGuard)
-  async setVolume(
-    @Req() req,
-    @Body() body: { volume_percent: number; device_id?: string },
-  ) {
-    return this.spotifyService.setVolume(
-      req.user.id,
-      body.volume_percent,
-      body.device_id,
-    );
-  }
-
-  @Put('toggle-shuffle')
-  @UseGuards(JwtAuthGuard)
-  async toggleShuffle(@Req() req, @Body() body: { state: boolean }) {
-    return this.spotifyService.toggleShuffle(req.user.id, body.state);
-  }
-
-  @Get('recently-played')
-  @UseGuards(JwtAuthGuard)
-  async getRecentlyPlayed(
-    @Req() req,
-    @Query('after') after?: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.spotifyService.getRecentlyPlayed(req.user.id, after, limit);
-  }
-
-  @Get('total-tracks')
-  @UseGuards(JwtAuthGuard)
-  async getTotalTracks(@Req() req) {
-    return this.spotifyService.totalTracks(req.user.id);
-  }
-
-  @Get('top-genres')
-  @UseGuards(JwtAuthGuard)
-  async getTopGenres(@Req() req) {
-    return this.spotifyService.topGenres(req.user.id);
-  }
-
-  @Get('get-queue')
-  @UseGuards(JwtAuthGuard)
-  async getQueue(@Req() req) {
-    return this.spotifyService.getQueue(req.user.id);
   }
 }

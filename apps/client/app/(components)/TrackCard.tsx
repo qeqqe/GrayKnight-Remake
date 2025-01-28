@@ -17,18 +17,6 @@ import {
 } from "@/components/ui/tooltip";
 import { spotifyTrack } from "../../lib/types/index";
 import {
-  playSpotifyTrack,
-  pauseSpotifyTrack,
-  nextSpotifyTrack,
-  previousSpotifyTrack,
-  checkIfTrackIsSaved,
-  removeTrackFromLibrary,
-  saveTrackToLibrary,
-  seekToPosition,
-  setVolume,
-  toggleShuffle,
-} from "@/lib/spotify/spotify";
-import {
   Play,
   Pause,
   SkipBack,
@@ -45,6 +33,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import DecryptedText from "@/src/reactbits/TextAnimations/DecryptedText/DecryptedText";
 import ElasticSlider from "@/src/reactbits/Components/ElasticSlider/ElasticSlider";
 import { TrackArtwork } from "./TrackArtwork";
+import {
+  checkIfTrackIsSaved,
+  nextSpotifyTrack,
+  pauseSpotifyTrack,
+  playSpotifyTrack,
+  previousSpotifyTrack,
+  removeTrackFromLibrary,
+  saveTrackToLibrary,
+  seekToPosition,
+  setVolume,
+  toggleShuffle,
+} from "@/lib/spotify/overview";
 interface ArtistDetails {
   id: string;
   name: string;

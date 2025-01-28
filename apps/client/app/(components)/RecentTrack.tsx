@@ -4,15 +4,13 @@ import { Button } from "@/components/ui/button";
 import { formatDistance } from "date-fns";
 import { RecentlyPlayedItem, RecentlyPlayedResponse } from "@/lib/types/index";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  fetchRecentlyPlayed,
-  playTrackThroughQueue,
-} from "@/lib/spotify/spotify";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Loader2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { fetchRecentlyPlayed } from "@/lib/spotify/recent";
+import { playTrackThroughQueue } from "@/lib/spotify/search";
 
 function RecentlyPlayed() {
   const [items, setItems] = useState<RecentlyPlayedItem[]>([]);

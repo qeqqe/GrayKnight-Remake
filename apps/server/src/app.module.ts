@@ -7,6 +7,9 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SpotifyModule } from './spotify/spotify.module';
 import { OfflineSpotifyModule } from './offline-spotify/offline-spotify.module';
+import { OverviewSpotifyModule } from './overview-spotify/overview-spotify.module';
+import { SearchSpotifyModule } from './search-spotify/search-spotify.module';
+import { RecentSpotifyModule } from './recent-spotify/recent-spotify.module';
 
 @Module({
   imports: [
@@ -18,6 +21,9 @@ import { OfflineSpotifyModule } from './offline-spotify/offline-spotify.module';
     AuthModule,
     SpotifyModule,
     OfflineSpotifyModule,
+    OverviewSpotifyModule,
+    SearchSpotifyModule,
+    RecentSpotifyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

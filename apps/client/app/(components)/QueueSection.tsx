@@ -1,11 +1,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { fetchQueue, playSpotifyTrack } from "@/lib/spotify/spotify";
 import { QueueInterface } from "@/lib/types/QueueType";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { Play } from "lucide-react";
+import { fetchQueue, playSpotifyTrack } from "@/lib/spotify/overview";
 
 const QueueSection = () => {
   const [queueItems, setQueueItems] = useState<QueueInterface[]>([]);
