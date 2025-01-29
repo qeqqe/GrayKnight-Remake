@@ -10,6 +10,7 @@ import { OfflineSpotifyModule } from './offline-spotify/offline-spotify.module';
 import { OverviewSpotifyModule } from './overview-spotify/overview-spotify.module';
 import { SearchSpotifyModule } from './search-spotify/search-spotify.module';
 import { RecentSpotifyModule } from './recent-spotify/recent-spotify.module';
+import { LibrarySpotifyModule } from './library-spotify/library-spotify.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RecentSpotifyModule } from './recent-spotify/recent-spotify.module';
     OverviewSpotifyModule,
     SearchSpotifyModule,
     RecentSpotifyModule,
+    LibrarySpotifyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

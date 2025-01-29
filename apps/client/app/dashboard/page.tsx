@@ -21,6 +21,7 @@ import SearchSection from "../(components)/SearchSection";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import HistorySection from "../(components)/HistorySection";
+import LibraryContent from "../(components)/LibraryContent";
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg";
 
@@ -300,8 +301,10 @@ const Page = () => {
                 <TabsContent value="library" className="mt-0">
                   <Card className="bg-white/[0.03] border-white/10">
                     <CardContent className="p-6">
-                      <h2 className="text-2xl font-bold mb-4">Library</h2>
-                      {/* library content */}
+                      <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-white to-zinc-900 text-transparent bg-clip-text">
+                        Your Playlists
+                      </h2>
+                      <LibraryContent />
                     </CardContent>
                   </Card>
                 </TabsContent>
