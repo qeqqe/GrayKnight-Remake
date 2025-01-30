@@ -57,13 +57,15 @@ const UserTopItems = () => {
       <div className="flex items-center justify-between">
         <div className="flex gap-4">
           <Button
+            className="bg-white/5"
             variant={"ghost"}
             onClick={() => setSearchParams({ ...searchParams, type: "tracks" })}
           >
             Top Tracks
           </Button>
           <Button
-            // variant={searchParams.type === "artists" ? "ghost" : "ghost"}
+            className="bg-white/5"
+            // variant={searchParams.type === "artists" ? "default" : "outline"}
             variant={"ghost"}
             onClick={() =>
               setSearchParams({ ...searchParams, type: "artists" })

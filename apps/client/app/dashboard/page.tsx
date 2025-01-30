@@ -8,6 +8,7 @@ import {
   Search,
   Smartphone,
   Menu,
+  ChartColumnIncreasing,
 } from "lucide-react";
 import Image from "next/image";
 import { spotifyTrack } from "@/lib/types";
@@ -22,6 +23,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import HistorySection from "../(components)/HistorySection";
 import LibraryContent from "../(components)/LibraryContent";
+import StatsSection from "../(components)/StatsSection";
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg";
 
@@ -228,6 +230,11 @@ const Page = () => {
                 icon: <HistoryIcon className="w-4 h-4" />,
                 label: "Recently Played",
               },
+              {
+                value: "stats",
+                icon: <ChartColumnIncreasing className="w-4 h-4" />,
+                label: "Stats",
+              },
             ].map((item) => (
               <TabsTrigger
                 key={item.value}
@@ -322,6 +329,9 @@ const Page = () => {
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+                <TabsContent value="stats" className="mt-0">
+                  <StatsSection />
                 </TabsContent>
               </Tabs>
             </div>

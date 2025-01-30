@@ -1,96 +1,120 @@
 # 🎵 GrayKnight - Your Advanced Spotify Companion
 
-GrayKnight is a Spotify companion application that provides deep insights into your listening habits while offering seamless playback control across all your devices. Built with modern web technologies, it offers a premium music management experience.
+GrayKnight is a powerful Spotify companion that provides deep analytics and seamless device control, enriched with real-time tracking and advanced caching mechanisms.
 
 ## ✨ Key Features
 
-- **Comprehensive Listening Analytics**
+- **Real-Time Listening Analytics**
 
-  - Detailed tracking of listening sessions
-  - Genre distribution analysis
-  - Artist interaction patterns
-  - Time-based listening habits
+  - Comprehensive session tracking with device context
+  - Advanced genre distribution analysis
+  - Artist interaction patterns with genre caching
+  - Time-based listening habits with TimescaleDB integration
+  - Offline tracking support
 
-- **Cross-Device Playback Control**
+- **Smart Device Management**
 
-  - Seamless device switching
-  - Volume control across devices
-  - Queue management
-  - Playback state synchronization
+  - Real-time device state monitoring
+  - Cross-device playback control
+  - Intelligent volume management
+  - Multi-device synchronization
+  - Device context awareness
 
-## 🚀 Upcoming Features
-
-- **Advanced Statistics & Insights**
-
-  - Interactive visualizations of listening patterns
-  - Personalized music taste analysis
-  - Mood-based music tracking
-  - Playlist evolution tracking
-
-- **Interactive Listening History Dashboard**
-
-  - Heat maps of listening activity
-  - Genre evolution over time
-  - Top tracks by time period
-  - Listening session patterns
-
-- **Advanced Analytics Suite**
-
-  - Music mood analysis
-  - Discovery rate tracking
+- **Advanced Music Intelligence**
+  - User taste profiling
+  - Genre evolution tracking
   - Artist loyalty metrics
-  - Genre exploration paths
+  - Discovery rate analysis
+  - Playlist analysis and insights
 
-- **Social Features**
-  - Music taste compatibility
-  - Collaborative playlist insights
-  - Listening pattern comparisons
+## 🚀 Technical Architecture
 
-## 🖼️ Screenshots
+- **Frontend Stack**
 
-![Image](https://github.com/user-attachments/assets/ec31551b-41ec-4f5b-ac8b-b542c3b6c5c5)
+  - Next.js with TypeScript
+  - Real-time state management
+  - Responsive Tailwind design
+  - ShadCN UI components
+  - Custom animations with React Bits
 
-![Image](https://github.com/user-attachments/assets/d6f8a0e0-f48a-4558-9960-7395d23e2f7c)
+- **Backend Infrastructure**
 
-![Image](https://github.com/user-attachments/assets/c69e0536-b8df-4990-abf5-9de14aeb99b9)
+  - NestJS REST API
+  - PostgreSQL with Prisma ORM
+  - TimescaleDB for time-series data
+  - Redis caching layer
+  - Spotify Web API integration
 
-## 🛠️ Technical Highlights
-
-- **Robust Architecture**
-
-  - NestJS backend
-  - Next.js frontend with TypeScript
-  - Real-time Spotify API integration
-  - PostgreSQL database for analytics
-
-- **Advanced State Management**
-
-  - Sophisticated device state tracking
-  - Real-time playback synchronization
-  - Efficient caching mechanisms (Redis in future)
-  - Optimized API polling strategies
-
-- **Data Analysis Pipeline**
-  - Complex listening pattern analysis
-  - Automated insight generation
+- **Data Processing**
+  - Real-time event processing
   - Efficient data aggregation
-  - Scalable analytics processing
+  - Time-series analytics
+  - Genre caching system
+  - Listening pattern analysis
 
-## 🔧 Technology Stack
+## 📊 Advanced Analytics
 
-- **Frontend**: Next.js, TypeScript, Tailwind CSS, React Bits, Shadcn
-- **Backend**: NestJS
-- **DB**: PostgreSQL (Prisma ORM), TimescaleDB (for future analytics)
-- **Authentication**: JWT, Spotify OAuth
-- **Infrastructure**: Vercel, Render
+- **Listening Patterns**
 
-## 📈 Project Status
+  - Time-based activity heatmaps
+  - Genre distribution over time
+  - Artist interaction frequency
+  - Track discovery patterns
+  - Session duration analysis
 
-GrayKnight is actively under development with frequent updates. The core functionality is stable and production-ready, while new features are being added regularly.
+- **Music Intelligence**
+  - Genre affinity scoring
+  - Artist loyalty tracking
+  - Music mood analysis
+  - Playlist evolution insights
+  - Listening context awareness
+
+## 🔐 Data Management
+
+- **Caching Strategy**
+
+  - Redis for hot data
+  - Artist genre caching
+  - Device state caching
+  - Playlist metadata caching
+  - API response optimization
+
+- **Time-Series Data**
+  - TimescaleDB integration
+  - Historical trend analysis
+  - Performance metrics
+  - Listening patterns
+  - Activity aggregation
+
+## 🛠️ System Architecture
+
+- **Data Flow**
+
+  - Real-time event processing
+  - Efficient data aggregation
+  - Caching mechanisms
+  - Time-series storage
+  - Analytics pipeline
+
+- **Performance Optimization**
+  - Query optimization
+  - Efficient data structures
+  - Intelligent caching
+  - Background processing
+  - API response compression
+
+## 🔄 Continuous Development
+
+- **Upcoming Features**
+  - Advanced recommendation engine
+  - Social listening features
+  - Extended offline support
+  - Enhanced visualizations
+  - AI-powered insights
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit pull requests, create issues, or suggest new features.
+We welcome contributions! Check our issues page for current tasks or suggest new features.
 
 ## 📝 License
 
@@ -98,4 +122,4 @@ Contributions are welcome! Please feel free to submit pull requests, create issu
 
 ---
 
-<p align="center">Star and contribute plss :p</p>
+<p align="center">Made with ♥️ for music lovers</p>

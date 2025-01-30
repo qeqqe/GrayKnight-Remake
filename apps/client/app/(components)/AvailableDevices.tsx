@@ -135,7 +135,7 @@ export default function AvailableDevices() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       <div className="space-y-2">
         {devices.map((device) => (
           <div

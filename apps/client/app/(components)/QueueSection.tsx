@@ -68,8 +68,8 @@ const QueueSection = () => {
             className="flex items-center gap-3 p-3 hover:bg-zinc-300/70 dark:hover:bg-zinc-800/50 rounded-md group"
           >
             <Image
-              src={track.album.images[2]?.url || "/placeholder.png"}
-              alt={track.album.name}
+              src={track.album?.images[2]?.url || "/placeholder.png"}
+              alt={track.album?.name}
               width={40}
               height={40}
               className="object-cover rounded"
@@ -77,7 +77,7 @@ const QueueSection = () => {
             <div className="flex-1 min-w-0">
               <p className="font-medium text-zinc-20 truncate">{track.name}</p>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
-                {track.artists.map((a) => a.name).join(", ")}
+                {track.artists?.map((a) => a.name).join(", ")}
               </p>
             </div>
             <Button
