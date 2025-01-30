@@ -60,7 +60,7 @@ const UserCurrentPlaylist = () => {
           {currentUserPlaylist?.items.map((playlist) => (
             <div
               key={playlist.id}
-              className="flex items-center justify-between p-4 text-zinc-200 bg-zinc-800 rounded-lg cursor-pointer"
+              className="flex items-center justify-between p-4 text-zinc-200 bg-zinc-800/20 rounded-lg cursor-pointer"
               onClick={() => handlePlaylistClick(playlist)}
             >
               <div className="flex items-center gap-4">

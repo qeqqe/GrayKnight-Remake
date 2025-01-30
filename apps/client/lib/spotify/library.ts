@@ -47,3 +47,31 @@ export async function getPlayListItem(playlistId: string) {
     throw error;
   }
 }
+
+export async function getTopItems(
+  type: "tracks" | "artists",
+  time_range: "medium_term" | "short_term" | "long_term"
+) {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/library-spotify/get-top-items/${type}/${time_range}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch top items");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching top items:", error);
+    throw error;
+  }
+}

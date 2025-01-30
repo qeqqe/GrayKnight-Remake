@@ -299,14 +299,7 @@ const Page = () => {
                   </Card>
                 </TabsContent>
                 <TabsContent value="library" className="mt-0">
-                  <Card className="bg-white/[0.03] border-white/10">
-                    <CardContent className="p-6">
-                      <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-white to-zinc-900 text-transparent bg-clip-text">
-                        Your Playlists
-                      </h2>
-                      <LibraryContent />
-                    </CardContent>
-                  </Card>
+                  <LibraryContent />
                 </TabsContent>
                 <TabsContent value="devices" className="mt-0">
                   <Card className="bg-white/[0.03] border-white/10">

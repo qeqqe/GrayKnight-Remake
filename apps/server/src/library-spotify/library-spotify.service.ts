@@ -55,4 +55,31 @@ export class LibrarySpotifyService {
       throw error;
     }
   }
+
+  async getTopItems(userId: string, type: string, time_range: string) {
+    try {
+      const token = await this.authService.refreshToken(userId);
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/top/${type}?time_range=${time_range}&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new UnauthorizedException(
+          error.error?.message || 'Failed to fetch top items',
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting top items:', error);
+      throw error;
+    }
+  }
 }

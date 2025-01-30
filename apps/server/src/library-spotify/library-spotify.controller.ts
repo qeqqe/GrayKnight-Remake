@@ -19,4 +19,14 @@ export class LibrarySpotifyController {
       req.params.playlistId,
     );
   }
+
+  @Get('get-top-items/:type/:time_range')
+  @UseGuards(JwtAuthGuard)
+  async getTopItems(@Req() req) {
+    return this.librarySpotifyService.getTopItems(
+      req.user.id,
+      req.params.type,
+      req.params.time_range,
+    );
+  }
 }
