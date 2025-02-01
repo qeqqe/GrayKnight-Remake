@@ -2,8 +2,6 @@
 
 A web application that enhances your Spotify experience with detailed listening statistics and advanced playback controls.
 
-[Welcome Page Screenshot]
-
 ## Features
 
 ### Live Music Control
