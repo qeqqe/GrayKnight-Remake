@@ -162,9 +162,13 @@ export class OfflineSpotifyService implements OnApplicationBootstrap {
           await this.prisma.trackPlay.update({
             where: { id: existingTrackPlay.id },
             data: {
-              playedDurationMs:
-                (existingTrackPlay.playedDurationMs || 0) +
-                actualListenedDuration,
+              playCount: { increment: 1 },
+              durationMs: {
+                increment: currentTrack.item.duration_ms,
+              },
+              playedDurationMs: {
+                increment: actualListenedDuration,
+              },
             },
           });
         }

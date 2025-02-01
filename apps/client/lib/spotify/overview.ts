@@ -1,4 +1,4 @@
-export async function fetchTotalTracks() {
+export async function fetchOverviewStats() {
   try {
     const token = localStorage.getItem("token");
 
@@ -9,7 +9,7 @@ export async function fetchTotalTracks() {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/overview-spotify/total-tracks`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/overview-spotify/overview-stats`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -18,13 +18,12 @@ export async function fetchTotalTracks() {
     );
 
     if (!response.ok) {
-      throw new Error("Couldn't fetch total tracks played");
+      throw new Error("Couldn't fetch overview stats");
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error("Failed to fetch total tracks:", error);
+    console.error("Failed to fetch overview stats:", error);
     throw error;
   }
 }

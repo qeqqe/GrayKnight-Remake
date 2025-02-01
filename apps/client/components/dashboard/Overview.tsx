@@ -9,8 +9,7 @@ import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import QueueSection from "@/app/(components)/QueueSection";
 import {
-  fetchTopGenere,
-  fetchTotalTracks,
+  fetchOverviewStats,
   getOfflineTrackingStatus,
   toggleOfflineTracking,
 } from "@/lib/spotify/overview";
@@ -29,38 +28,15 @@ export function Overview({ currentTrack }: OverviewProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both total tracks and actual listening time
-        const [totalTracksData, statsData] = await Promise.all([
-          fetchTotalTracks(),
-          fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/overview`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          ).then((res) => res.json()),
-        ]);
-
-        setTotalTrackLength(totalTracksData?._sum?.playCount || 0);
-        setTotalDuration(statsData?.totalDuration || 0);
+        const stats = await fetchOverviewStats();
+        setTotalTrackLength(stats.totalTracks);
+        setTotalDuration(stats.totalDuration);
+        setTopGenre(stats.topGenre);
       } catch (error) {
-        console.error("Error fetching track data:", error);
+        console.error("Error fetching overview stats:", error);
       }
     };
 
-    const fetchTopGenres = async () => {
-      try {
-        const data = await fetchTopGenere();
-        if (data && data.length > 0) {
-          setTopGenre(data[0].genre);
-        }
-      } catch (error) {
-        console.error("Error fetching top genres:", error);
-      }
-    };
-
-    fetchTopGenres();
     fetchData();
   }, [router]);
 
@@ -89,12 +65,12 @@ export function Overview({ currentTrack }: OverviewProps) {
     () => [
       {
         label: "Total Tracks",
-        value: totalTrackLength.toString(),
+        value: totalTrackLength.toLocaleString(),
         icon: <Music2 className="w-5 h-5" />,
       },
       {
         label: "Listening Time",
-        value: `${Math.round(totalDuration / 3600000)}h`, // Convert ms to hours
+        value: `${Math.round(totalDuration / 3600000)}h`,
         icon: <Clock className="w-5 h-5" />,
       },
       {

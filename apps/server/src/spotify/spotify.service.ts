@@ -14,6 +14,7 @@ export class SpotifyService {
       lastProgress: number;
       duration: number;
       scrobbled: boolean;
+      actualPlayedDuration: number; // Add this to track actual played duration
     }
   >();
 
@@ -102,17 +103,24 @@ export class SpotifyService {
         lastProgress: data.progress_ms,
         duration: data.item.duration_ms,
         scrobbled: false,
+        actualPlayedDuration: 0, // Add this to track actual played duration
       });
       return;
     }
 
-    // update progress
+    // Calculate actual played duration since last check
     const progressDiff = data.progress_ms - currentState.lastProgress;
+
+    // Only count positive progress (actual listening time)
+    if (progressDiff > 0) {
+      currentState.actualPlayedDuration += progressDiff;
+    }
 
     // Handle seek/restart
     if (progressDiff < -3000) {
       currentState.startTime = currentTime;
       currentState.lastProgress = data.progress_ms;
+      // Don't reset scrobbled status or actualPlayedDuration
       return;
     }
 
@@ -120,10 +128,9 @@ export class SpotifyService {
     const listenedPercentage = (data.progress_ms / data.item.duration_ms) * 100;
     const shouldScrobble = listenedPercentage >= 50 && !currentState.scrobbled;
 
-    // update state
+    // Update state
     currentState.lastProgress = data.progress_ms;
 
-    // Only scrobble if playing and not already scrobbled
     if (shouldScrobble && data.is_playing) {
       // Check for recent scrobbles first
       const recentScrobble = await this.prisma.trackPlay.findFirst({
@@ -131,7 +138,7 @@ export class SpotifyService {
           userId,
           trackId: data.item.id,
           timestamp: {
-            gte: new Date(Date.now() - 30000), // last 30 seconds
+            gte: new Date(Date.now() - 30000),
           },
         },
       });
@@ -141,6 +148,49 @@ export class SpotifyService {
         currentState.scrobbled = true;
         this.logger.log(`Scrobbled track ${data.item.name} for user ${userId}`);
       }
+
+      const existingTrackPlay = await this.prisma.trackPlay.findFirst({
+        where: {
+          userId,
+          trackId: data.item.id,
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
+
+      if (existingTrackPlay) {
+        await this.prisma.trackPlay.update({
+          where: { id: existingTrackPlay.id },
+          data: {
+            playCount: { increment: 1 },
+            playedDurationMs: {
+              increment: currentState.actualPlayedDuration,
+            },
+          },
+        });
+      } else {
+        await this.prisma.trackPlay.create({
+          data: {
+            userId,
+            trackId: data.item.id,
+            trackName: data.item.name,
+            artistIds: data.item.artists.map((artist: any) => artist.id),
+            artistNames: data.item.artists.map((artist: any) => artist.name),
+            albumName: data.item.album.name,
+            durationMs: data.item.duration_ms,
+            playedDurationMs: currentState.actualPlayedDuration,
+            popularity: data.item.popularity,
+            playCount: 1,
+            contextType: data.context?.type || null,
+            contextUri: data.context?.uri || null,
+            timestamp: new Date(),
+          },
+        });
+      }
+
+      currentState.scrobbled = true;
+      // ! don't reset actualPlayedDuration as the user might continue listening
     }
   }
 

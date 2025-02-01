@@ -55,6 +55,25 @@ export interface OverviewPageStatisticsInterface {
     tracks: number;
     duration: number;
   };
+  patterns: {
+    hourlyActivity: number;
+    peakHour: number;
+    genreDiversity: {
+      total: number;
+      topGenre: string;
+      topGenrePercentage: number;
+    };
+    completionRate: number;
+    listeningStyle: {
+      type: "Explorer" | "Specialist" | "Balanced";
+      description: string;
+    };
+    discoveryRate: number;
+    artistVariety: {
+      score: number;
+      level: "High" | "Medium" | "Low";
+    };
+  };
 }
 
 export interface StatItemProps {

@@ -469,4 +469,52 @@ export class OverviewSpotifyService {
       throw error;
     }
   }
+
+  async getOverviewStats(userId: string) {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const trackStats = await this.prisma.trackPlay.aggregate({
+        where: {
+          userId,
+          timestamp: {
+            gte: sevenDaysAgo,
+          },
+        },
+        _sum: {
+          playCount: true,
+          playedDurationMs: true,
+        },
+      });
+
+      const genreCaches = await this.prisma.artistGenreCache.findMany({
+        where: {
+          userId,
+          updatedAt: {
+            gte: sevenDaysAgo,
+          },
+        },
+        select: {
+          genres: true,
+          playCount: true,
+        },
+        orderBy: {
+          playCount: 'desc',
+        },
+        take: 1,
+      });
+
+      const topGenre = genreCaches[0]?.genres[0] || 'N/A';
+
+      return {
+        totalTracks: trackStats._sum.playCount || 0,
+        totalDuration: trackStats._sum.playedDurationMs || 0,
+        topGenre,
+      };
+    } catch (error) {
+      this.logger.error('Error getting overview stats:', error);
+      throw error;
+    }
+  }
 }

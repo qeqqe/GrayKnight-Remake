@@ -8,6 +8,10 @@ import {
   Put,
   Req,
   UseGuards,
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { OverviewSpotifyService } from './overview-spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
@@ -15,7 +19,7 @@ import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
 @Controller('overview-spotify')
 export class OverviewSpotifyController {
   constructor(private overviewSpotifyService: OverviewSpotifyService) {}
-
+  private readonly logger = new Logger(OverviewSpotifyController.name);
   @Get('total-tracks')
   @UseGuards(JwtAuthGuard)
   async getTotalTracks(@Req() req) {
@@ -124,5 +128,22 @@ export class OverviewSpotifyController {
   @UseGuards(JwtAuthGuard)
   async getQueue(@Req() req) {
     return this.overviewSpotifyService.getQueue(req.user.id);
+  }
+
+  @Get('overview-stats')
+  @UseGuards(JwtAuthGuard)
+  async getOverviewStats(@Req() req) {
+    try {
+      if (!req.user?.id) {
+        throw new UnauthorizedException('User ID is required');
+      }
+      return await this.overviewSpotifyService.getOverviewStats(req.user.id);
+    } catch (error) {
+      this.logger.error('Failed to get overview stats:', error);
+      throw new HttpException(
+        'Failed to fetch overview stats',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
