@@ -44,3 +44,22 @@ export interface StatsResponse {
   topGenres: GenreStat[];
   topArtists: ArtistStat[];
 }
+
+export interface OverviewPageStatisticsInterface {
+  totalTracks: number;
+  uniqueTracks: number;
+  uniqueArtists: number;
+  totalDuration: number;
+  averageTrackDuration: number;
+  dailyAverage: {
+    tracks: number;
+    duration: number;
+  };
+}
+
+export interface StatItemProps {
+  label: string;
+  value: string;
+  percentage?: string;
+  subtext?: string;
+}

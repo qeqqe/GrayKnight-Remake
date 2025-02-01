@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { StatsSpotifyService } from './stats-spotify.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
 
@@ -6,20 +6,15 @@ import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
 export class StatsSpotifyController {
   constructor(private statsService: StatsSpotifyService) {}
 
-  @Get('listening-stats')
+  @Get('overview')
   @UseGuards(JwtAuthGuard)
-  async getListeningStats(
-    @Req() req,
-    @Query('timeRange') timeRange: string = 'week',
-  ) {
-    return this.statsService.getListeningStats(req.user.id, timeRange);
+  async getListeningStats(@Req() req) {
+    return this.statsService.getOverviewStats(req.user.id);
   }
 
-  @Get('debug')
+  @Get('genres')
   @UseGuards(JwtAuthGuard)
-  async debugStats(@Req() req) {
-    const userId = req.user.id;
-    const raw = await this.statsService.debugRawData(userId);
-    return raw;
+  async getGenreStats(@Req() req) {
+    return this.statsService.getGenereStats(req.user.id);
   }
 }

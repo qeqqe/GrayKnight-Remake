@@ -94,7 +94,7 @@ export class SpotifyService {
     const currentState = this.activePlaybackStates.get(userId);
     const currentTime = Date.now();
 
-    // if this is a new track or returning to an unfinished track
+    // Reset if new track
     if (!currentState || currentState.trackId !== data.item.id) {
       this.activePlaybackStates.set(userId, {
         trackId: data.item.id,
@@ -109,25 +109,38 @@ export class SpotifyService {
     // update progress
     const progressDiff = data.progress_ms - currentState.lastProgress;
 
-    // if progress went backwards significantly or track was seeked
+    // Handle seek/restart
     if (progressDiff < -3000) {
       currentState.startTime = currentTime;
       currentState.lastProgress = data.progress_ms;
       return;
     }
 
-    // calculate listening progress
+    // Calculate progress
     const listenedPercentage = (data.progress_ms / data.item.duration_ms) * 100;
     const shouldScrobble = listenedPercentage >= 50 && !currentState.scrobbled;
 
     // update state
     currentState.lastProgress = data.progress_ms;
 
-    // if we should scrobble the track
+    // Only scrobble if playing and not already scrobbled
     if (shouldScrobble && data.is_playing) {
-      await this.trackPlayEvent(userId, data.item, data.context);
-      currentState.scrobbled = true;
-      console.log(`Scrobbled track ${data.item.name} for user ${userId}`);
+      // Check for recent scrobbles first
+      const recentScrobble = await this.prisma.trackPlay.findFirst({
+        where: {
+          userId,
+          trackId: data.item.id,
+          timestamp: {
+            gte: new Date(Date.now() - 30000), // last 30 seconds
+          },
+        },
+      });
+
+      if (!recentScrobble) {
+        await this.trackPlayEvent(userId, data.item, data.context);
+        currentState.scrobbled = true;
+        this.logger.log(`Scrobbled track ${data.item.name} for user ${userId}`);
+      }
     }
   }
 
@@ -288,25 +301,31 @@ export class SpotifyService {
     userId: string,
   ): Promise<string[]> {
     try {
-      const cached = await this.prisma.artistGenreCache.findFirst({
+      // Check existing cache with tighter conditions
+      const cached = await this.prisma.artistGenreCache.findUnique({
         where: {
-          AND: [{ artistId }, { userId }],
+          artistId_userId: {
+            artistId,
+            userId,
+          },
         },
       });
 
-      if (
+      // Cache is valid for 7 days
+      const isCacheValid =
         cached &&
-        cached.updatedAt > new Date(Date.now() - 24 * 60 * 60 * 1000)
-      ) {
+        cached.updatedAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      if (isCacheValid) {
+        // Update play count and return cached genres
         await this.prisma.artistGenreCache.update({
           where: { id: cached.id },
-          data: {
-            playCount: { increment: 1 },
-          },
+          data: { playCount: { increment: 1 } },
         });
         return cached.genres;
       }
 
+      // Fetch fresh data from Spotify API
       const artistData = await this.getArtistDetails(userId, artistId);
       const cleanedGenres =
         artistData.genres?.map((genre) =>
@@ -316,9 +335,13 @@ export class SpotifyService {
             .replace(/["[\]]/g, ''),
         ) || [];
 
+      // Upsert with proper unique constraint
       const result = await this.prisma.artistGenreCache.upsert({
         where: {
-          id: cached?.id || 'temp-id',
+          artistId_userId: {
+            artistId,
+            userId,
+          },
         },
         create: {
           artistId,
@@ -333,6 +356,9 @@ export class SpotifyService {
         },
       });
 
+      this.logger.debug(
+        `Updated genre cache for artist ${artistId}: ${cleanedGenres.join(', ')}`,
+      );
       return result.genres;
     } catch (error) {
       this.logger.error('Error caching artist genres:', error);
@@ -340,51 +366,84 @@ export class SpotifyService {
     }
   }
 
-  async trackPlayEvent(userId: string, trackData: any, context?: any) {
+  async trackPlayEvent(userId: string, track: any, context?: any) {
     try {
-      // Check for recent play
+      // Check for recent plays without transaction
       const recentPlay = await this.prisma.trackPlay.findFirst({
         where: {
           userId,
-          trackId: trackData.id,
+          trackId: track.id,
           timestamp: {
-            gte: new Date(Date.now() - 30000), // 30 seconds ago
+            gte: new Date(Date.now() - 30000),
           },
+        },
+        orderBy: {
+          timestamp: 'desc',
         },
       });
 
       if (recentPlay) {
-        this.logger.log('Track recently scrobbled, skipping');
-        return;
+        this.logger.debug(`Skipping duplicate scrobble for track ${track.id}`);
+        return recentPlay;
       }
 
-      // Process genres and update cache for each artist
-      const genrePromises = trackData.artists.map((artist) =>
-        this.cacheArtistGenres(artist.id, userId),
+      // Cache genres for all artists
+      await Promise.all(
+        track.artists.map((artist) =>
+          this.cacheArtistGenres(artist.id, userId),
+        ),
       );
-      await Promise.all(genrePromises);
 
-      // Create track play record
-      await this.prisma.trackPlay.create({
+      // Find existing track play
+      const existingTrackPlay = await this.prisma.trackPlay.findFirst({
+        where: {
+          userId,
+          trackId: track.id,
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
+
+      if (existingTrackPlay) {
+        return await this.prisma.trackPlay.update({
+          where: { id: existingTrackPlay.id },
+          data: {
+            playCount: existingTrackPlay.playCount + 1,
+            durationMs: existingTrackPlay.durationMs + track.duration_ms,
+            playedDurationMs: existingTrackPlay.playedDurationMs
+              ? existingTrackPlay.playedDurationMs +
+                (track.played_duration_ms || track.duration_ms)
+              : track.played_duration_ms || track.duration_ms,
+            timestamp: new Date(),
+            artistIds: track.artists.map((artist: any) => artist.id),
+            artistNames: track.artists.map((artist: any) => artist.name),
+            contextType: context?.type || null,
+            contextUri: context?.uri || null,
+          },
+        });
+      }
+
+      // Create new record
+      return await this.prisma.trackPlay.create({
         data: {
           userId,
-          trackId: trackData.id,
-          trackName: trackData.name,
-          artistIds: trackData.artists.map((a) => a.id),
-          artistNames: trackData.artists.map((a) => a.name),
-          albumName: trackData.album.name,
-          durationMs: trackData.duration_ms,
-          playedDurationMs:
-            this.activePlaybackStates.get(userId)?.lastProgress ||
-            trackData.duration_ms,
-          popularity: trackData.popularity,
-          contextType: context?.type,
-          contextUri: context?.uri,
+          trackId: track.id,
+          trackName: track.name,
+          artistIds: track.artists.map((artist: any) => artist.id),
+          artistNames: track.artists.map((artist: any) => artist.name),
+          albumName: track.album.name,
+          durationMs: track.duration_ms,
+          playedDurationMs: track.played_duration_ms || track.duration_ms,
+          popularity: track.popularity,
+          playCount: 1,
+          contextType: context?.type || null,
+          contextUri: context?.uri || null,
           timestamp: new Date(),
         },
       });
     } catch (error) {
-      this.logger.error('Error recording track play:', error);
+      this.logger.error('Error tracking play event:', error);
       throw error;
     }
   }

@@ -1,18 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TimeRange } from '../types';
-
-interface GenreStat {
-  genre: string;
-  count: string | number;
-}
-
-interface ArtistStat {
-  artistId: string;
-  artistName: string;
-  playCount: string | number;
-  totalDuration: string | number;
-}
+import { OverviewPageStatistics } from '../types/index';
 
 @Injectable()
 export class StatsSpotifyService {
@@ -20,186 +8,218 @@ export class StatsSpotifyService {
 
   constructor(private prisma: PrismaService) {}
 
-  private getTimeRangeFilter(range: string): TimeRange {
-    const now = new Date();
-    const start = new Date();
+  async getOverviewStats(userId: string) {
+    this.logger.log(`Fetching overview stats for user ${userId}`);
 
-    switch (range) {
-      case 'week':
-        start.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        start.setMonth(now.getMonth() - 1);
-        break;
-      case 'year':
-        start.setFullYear(now.getFullYear() - 1);
-        break;
-      default:
-        start.setDate(now.getDate() - 7);
-    }
-
-    return { start, end: now };
-  }
-
-  async debugRawData(userId: string) {
-    const tracks = await this.prisma.trackPlay.findMany({
-      where: { userId },
-      take: 10,
-      orderBy: { timestamp: 'desc' },
-    });
-
-    return { tracks };
-  }
-
-  async getListeningStats(userId: string, timeRange: string) {
-    const { start, end } = this.getTimeRangeFilter(timeRange);
+    // Initialize with defaults to handle edge cases
+    const overViewPageStatistics: OverviewPageStatistics = {
+      totalTracks: 0,
+      uniqueTracks: 0,
+      uniqueArtists: 0,
+      totalDuration: 0,
+      averageTrackDuration: 0,
+      dailyAverage: {
+        tracks: 0,
+        duration: 0,
+      },
+      patterns: {
+        hourlyActivity: 0,
+        peakHour: 0,
+        genreDiversity: {
+          total: 0,
+          topGenre: '',
+          topGenrePercentage: 0,
+        },
+        completionRate: 0,
+      },
+    };
 
     try {
-      // First verify we have data
-      const dataCheck = await this.prisma.trackPlay.count({
+      // Limit data to last 7d for relevant insights
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      // Aggregate core metrics for overview
+      const recentStats = await this.prisma.trackPlay.aggregate({
         where: {
           userId,
           timestamp: {
-            gte: start,
-            lte: end,
+            gte: sevenDaysAgo,
+          },
+        },
+        _sum: {
+          playCount: true,
+          playedDurationMs: true, // Include actual played duration
+        },
+        _count: {
+          trackId: true,
+        },
+      });
+
+      // Identify unique artists for diversity metrics
+      const uniqueArtists = await this.prisma.trackPlay.groupBy({
+        by: ['artistIds'],
+        where: {
+          userId,
+          timestamp: {
+            gte: sevenDaysAgo,
           },
         },
       });
 
-      this.logger.debug(`Found ${dataCheck} tracks for user ${userId}`);
-
-      const [overview, timeDistribution, dailyStats, genreStats, artistStats] =
-        await Promise.all([
-          // Overall stats - Fixed query
-          this.prisma.$queryRaw`
-          SELECT 
-            CAST(COUNT(*) AS INTEGER) as "totalTracks",
-            CAST(COUNT(DISTINCT "trackId") AS INTEGER) as "uniqueTracks",
-            CAST(COUNT(DISTINCT unnest("artistIds")) AS INTEGER) as "uniqueArtists",
-            CAST(SUM("durationMs") AS BIGINT) as "totalDuration",
-            CAST(AVG("durationMs") AS FLOAT) as "averageTrackDuration",
-            CAST(
-              (COUNT(*) FILTER (WHERE skipped = true) * 100.0 / NULLIF(COUNT(*), 0))
-              AS FLOAT
-            ) as "skipRate"
-          FROM "TrackPlay"
-          WHERE "userId" = ${userId}
-          AND timestamp >= ${start}
-          AND timestamp <= ${end}
-        `,
-
-          // Time distribution - Fixed query
-          this.prisma.$queryRaw`
-          SELECT 
-            CAST(EXTRACT(HOUR FROM timestamp) AS INTEGER) as hour,
-            CAST(COUNT(*) AS INTEGER) as count
-          FROM "TrackPlay"
-          WHERE "userId" = ${userId}
-          AND timestamp >= ${start}
-          AND timestamp <= ${end}
-          GROUP BY EXTRACT(HOUR FROM timestamp)
-          ORDER BY hour
-        `,
-
-          // Daily stats - Fixed query
-          this.prisma.$queryRaw`
-          SELECT 
-            CAST(DATE(timestamp) AS TEXT) as date,
-            CAST(COUNT(*) AS INTEGER) as "trackCount",
-            CAST(SUM("durationMs") AS BIGINT) as "totalDuration",
-            CAST(COUNT(DISTINCT "trackId") AS INTEGER) as "uniqueTracks"
-          FROM "TrackPlay"
-          WHERE "userId" = ${userId}
-          AND timestamp >= ${start}
-          AND timestamp <= ${end}
-          GROUP BY DATE(timestamp)
-          ORDER BY date
-        `,
-
-          // Genre stats - Fixed query
-          this.prisma.$queryRaw`
-          WITH track_artists AS (
-            SELECT DISTINCT unnest("artistIds") as "artistId"
-            FROM "TrackPlay"
-            WHERE "userId" = ${userId}
-            AND timestamp >= ${start}
-            AND timestamp <= ${end}
-          )
-          SELECT 
-            genre,
-            CAST(COUNT(*) AS INTEGER) as count
-          FROM track_artists ta
-          CROSS JOIN LATERAL unnest(
-            (SELECT genres FROM "ArtistGenreCache" agc 
-             WHERE agc."artistId" = ta."artistId" 
-             AND agc."userId" = ${userId})
-          ) as genre
-          GROUP BY genre
-          ORDER BY count DESC
-          LIMIT 10
-        `,
-
-          // Artist stats - Fixed query
-          this.prisma.$queryRaw`
-          SELECT 
-            "artistId",
-            "artistName",
-            CAST(COUNT(*) AS INTEGER) as "playCount",
-            CAST(SUM("durationMs") AS BIGINT) as "totalDuration"
-          FROM (
-            SELECT 
-              unnest("artistIds") as "artistId",
-              unnest("artistNames") as "artistName",
-              "durationMs"
-            FROM "TrackPlay"
-            WHERE "userId" = ${userId}
-            AND timestamp >= ${start}
-            AND timestamp <= ${end}
-          ) as expanded
-          GROUP BY "artistId", "artistName"
-          ORDER BY "playCount" DESC
-          LIMIT 10
-        `,
-        ]);
-
-      this.logger.debug('Raw query results:', {
-        overview,
-        timeDistribution,
-        dailyStats,
-        genreStats,
-        artistStats,
+      // Determine actual listening days for accurate averages
+      const activeDays = await this.prisma.trackPlay.groupBy({
+        by: ['timestamp'],
+        where: {
+          userId,
+          timestamp: {
+            gte: sevenDaysAgo,
+          },
+        },
+        _count: true,
       });
 
-      const result = {
-        overview: overview?.[0] || {
-          totalTracks: 0,
-          uniqueTracks: 0,
-          uniqueArtists: 0,
-          totalDuration: 0,
-          averageTrackDuration: 0,
-          skipRate: 0,
-        },
-        timeDistribution: timeDistribution || [],
-        dailyStats: dailyStats || [],
-        topGenres:
-          (genreStats as GenreStat[])?.map((g) => ({
-            genre: g.genre,
-            count: Number(g.count),
-            percentage:
-              (Number(g.count) / Number(overview?.[0]?.totalTracks || 1)) * 100,
-          })) || [],
-        topArtists:
-          (artistStats as ArtistStat[])?.map((artist) => ({
-            artistId: artist.artistId,
-            artistName: artist.artistName,
-            playCount: Number(artist.playCount),
-            totalDuration: Number(artist.totalDuration),
-          })) || [],
+      const numberOfActiveDays = new Set(
+        activeDays.map((day) => new Date(day.timestamp).toDateString()),
+      ).size;
+
+      const totalTracks = recentStats._sum.playCount ?? 0;
+      const totalDuration = recentStats._sum.playedDurationMs ?? 0;
+
+      overViewPageStatistics.totalTracks = totalTracks;
+      overViewPageStatistics.uniqueTracks = recentStats._count.trackId;
+      overViewPageStatistics.uniqueArtists = uniqueArtists.length;
+      overViewPageStatistics.totalDuration = totalDuration;
+
+      // Prevent skewed metrics from inactive days
+      const actualDays = Math.max(numberOfActiveDays, 1); // Prevent division by zero
+      overViewPageStatistics.dailyAverage = {
+        tracks: Math.round(totalTracks / actualDays),
+        duration: Math.round(totalDuration / actualDays),
       };
 
-      return result;
+      // Ensure valid average duration when tracks exist
+      if (totalTracks > 0) {
+        overViewPageStatistics.averageTrackDuration = Math.round(
+          totalDuration / totalTracks,
+        );
+      }
+
+      // Analyze last 24h for detailed patterns
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      // Identify peak usage patterns
+      const hourlyStats = await this.prisma.trackPlay.groupBy({
+        by: ['timestamp'],
+        where: {
+          userId,
+          timestamp: {
+            gte: twentyFourHoursAgo,
+          },
+        },
+        _count: true,
+        orderBy: {
+          timestamp: 'asc',
+        },
+      });
+
+      // Calculate hourly activity score
+      const hourlyActivity =
+        hourlyStats.length > 0
+          ? hourlyStats.reduce((acc, curr) => acc + curr._count, 0) / 24
+          : 0;
+
+      // Derive engagement metrics from activity distribution
+      overViewPageStatistics.patterns = {
+        hourlyActivity,
+        peakHour: this.calculatePeakHour(hourlyStats),
+        genreDiversity: await this.calculateGenreDiversity(userId),
+        completionRate: this.calculateCompletionRate(overViewPageStatistics),
+      };
+
+      this.logger.debug('Overview stats:', overViewPageStatistics);
+      return overViewPageStatistics;
     } catch (error) {
-      this.logger.error('Error in getListeningStats:', error);
+      this.logger.error('Error fetching overview stats:', error);
+      throw error;
+    }
+  }
+
+  // Determines most active hour for targeted recommendations
+  private calculatePeakHour(hourlyStats: any[]) {
+    if (hourlyStats.length === 0) return null;
+    return hourlyStats
+      .reduce((max, curr) => (curr._count > max._count ? curr : max))
+      .timestamp.getHours();
+  }
+
+  // Measures listening variety for user profiling
+  private async calculateGenreDiversity(userId: string) {
+    const genres = await this.getGenereStats(userId);
+    return {
+      total: genres.length,
+      topGenre: genres[0]?.genre || null,
+      topGenrePercentage: genres[0]?.percentage || 0,
+    };
+  }
+
+  // Assesses user engagement through track completion
+  private calculateCompletionRate(stats: OverviewPageStatistics) {
+    if (!stats.totalTracks || !stats.averageTrackDuration) return 0;
+    return (
+      (stats.totalDuration / (stats.totalTracks * stats.averageTrackDuration)) *
+      100
+    );
+  }
+
+  // Analyzes genre distribution for music preferences
+  async getGenereStats(userId: string) {
+    this.logger.log(`Fetching genre stats for user ${userId}`);
+
+    try {
+      // Retrieve cached genre data for efficiency
+      const genrePlays = await this.prisma.artistGenreCache.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          genres: true,
+          playCount: true,
+        },
+      });
+
+      // Consolidate genre counts for overall preference analysis
+      const genreCounts = new Map<string, number>();
+      genrePlays.forEach((artist) => {
+        artist.genres.forEach((genre) => {
+          const currentCount = genreCounts.get(genre) || 0;
+          genreCounts.set(genre, currentCount + artist.playCount);
+        });
+      });
+
+      // Focus on most significant genres for meaningful insights
+      const sortedGenres = Array.from(genreCounts.entries())
+        .map(([genre, count]) => ({
+          genre,
+          count,
+          percentage: 0,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Limit to top genres for clarity
+
+      // Calculate relative importance of each genre
+      const totalPlays = sortedGenres.reduce(
+        (sum, genre) => sum + genre.count,
+        0,
+      );
+      sortedGenres.forEach((genre) => {
+        genre.percentage = (genre.count / totalPlays) * 100;
+      });
+
+      this.logger.debug('Top genres:', sortedGenres);
+      return sortedGenres;
+    } catch (error) {
+      this.logger.error('Error fetching top genres:', error);
       throw error;
     }
   }

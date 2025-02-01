@@ -95,7 +95,7 @@ export class OfflineSpotifyService implements OnApplicationBootstrap {
       const currentState = this.activePlaybackStates.get(userId);
       const currentTime = Date.now();
 
-      // if this is a new track or returning to an unfinished track
+      // Reset state if track changed or no state exists
       if (!currentState || currentState.trackId !== currentTrack.item.id) {
         this.activePlaybackStates.set(userId, {
           trackId: currentTrack.item.id,
@@ -104,42 +104,74 @@ export class OfflineSpotifyService implements OnApplicationBootstrap {
           duration: currentTrack.item.duration_ms,
           scrobbled: false,
         });
-        this.logger.debug(
-          `New track started for user ${userId}: ${currentTrack.item.name}`,
-        );
         return;
       }
 
-      // update progress
+      // Handle seek/restart
       const progressDiff = currentTrack.progress_ms - currentState.lastProgress;
-
-      // if progress went backwards significantly or track was seeked
       if (progressDiff < -3000) {
         currentState.startTime = currentTime;
         currentState.lastProgress = currentTrack.progress_ms;
-        this.logger.debug(`Track seeked/restarted for user ${userId}`);
+        currentState.scrobbled = false;
         return;
       }
 
-      // calculate listening progress
+      // Calculate progress
       const listenedPercentage =
         (currentTrack.progress_ms / currentTrack.item.duration_ms) * 100;
       const shouldScrobble =
         listenedPercentage >= 50 && !currentState.scrobbled;
+      const actualListenedDuration = Math.max(0, progressDiff);
 
-      // update state
+      // Update state
       currentState.lastProgress = currentTrack.progress_ms;
 
-      // if we should scrobble the track
+      // only process if should scrobble and playing
       if (shouldScrobble && currentTrack.is_playing) {
-        await this.spotifyService.trackPlayEvent(
-          userId,
-          currentTrack.item,
-          currentTrack.context,
-        );
+        // check for any recent scrobbles (including from main service)
+        const recentScrobble = await this.prisma.trackPlay.findFirst({
+          where: {
+            userId,
+            trackId: currentTrack.item.id,
+            timestamp: {
+              gte: new Date(currentTime - 60000), // check last minute to be safe
+            },
+          },
+        });
+
+        if (recentScrobble) {
+          this.logger.debug(
+            `Track already scrobbled recently: ${currentTrack.item.name}`,
+          );
+          currentState.scrobbled = true;
+          return;
+        }
+
+        // Only update existing record without creating new one
+        const existingTrackPlay = await this.prisma.trackPlay.findFirst({
+          where: {
+            userId,
+            trackId: currentTrack.item.id,
+          },
+          orderBy: {
+            timestamp: 'desc',
+          },
+        });
+
+        if (existingTrackPlay) {
+          await this.prisma.trackPlay.update({
+            where: { id: existingTrackPlay.id },
+            data: {
+              playedDurationMs:
+                (existingTrackPlay.playedDurationMs || 0) +
+                actualListenedDuration,
+            },
+          });
+        }
+
         currentState.scrobbled = true;
-        this.logger.log(
-          `Scrobbled track ${currentTrack.item.name} for user ${userId}`,
+        this.logger.debug(
+          `Updated duration for track ${currentTrack.item.name}`,
         );
       }
     } catch (error) {
@@ -153,7 +185,7 @@ export class OfflineSpotifyService implements OnApplicationBootstrap {
       where: {
         userId,
         timestamp: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // last 24h
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
         },
       },
       orderBy: {

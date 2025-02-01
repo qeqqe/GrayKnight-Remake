@@ -1,14 +1,12 @@
-import { StatsResponse } from "../types/StatTypes";
+import { OverviewPageStatisticsInterface } from "../types/StatTypes";
 
-export async function fetchListeningStats(
-  timeRange: "week" | "month" | "year" = "week"
-): Promise<StatsResponse> {
+export async function fetchOverviewStats(): Promise<OverviewPageStatisticsInterface> {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/listening-stats?timeRange=${timeRange}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/overview`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -17,14 +15,14 @@ export async function fetchListeningStats(
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch listening stats");
+      throw new Error("Failed to fetch overview stats");
     }
 
     const data = await response.json();
-    console.log("Received stats data:", data); // Debug log
+
     return data;
   } catch (error) {
-    console.error("Error fetching listening stats:", error);
+    console.error("Error fetching overview stats:", error);
     throw error;
   }
 }

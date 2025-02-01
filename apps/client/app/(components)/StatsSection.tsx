@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Line, Bar } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,17 +12,14 @@ import {
   Title,
   Tooltip,
   Legend,
-  ChartData,
 } from "chart.js";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  OverviewPageStatisticsInterface,
+  StatItemProps,
+} from "@/lib/types/StatTypes";
+import { fetchOverviewStats } from "@/lib/spotify/stats";
 
 ChartJS.register(
   CategoryScale,
@@ -34,143 +31,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-interface StatData {
-  overview: {
-    totalTracks: number;
-    totalDuration: number;
-    uniqueTracks: number;
-    uniqueArtists: number;
-    skipRate: number;
-    averageTrackDuration: number;
-  };
-  listeningTime: number[];
-  topGenres: { genre: string; count: number }[];
-  artistDiversity: number[];
-  dailyTracks: number[];
-  timeOfDay: { [key: string]: number };
-  weekdayActivity: { [key: string]: number };
-  timeDistribution: { hour: number; count: number }[];
-  dailyStats: { date: string; track_count: number; total_duration: number }[];
-  topArtists: {
-    artist_id: string;
-    artist_name: string;
-    play_count: number;
-    total_duration: number;
-    genres: string[];
-  }[];
-}
-
-interface ChartDataSets {
-  listeningTime: ChartData<"line">;
-  artistDiversity: ChartData<"bar">;
-  timeOfDay: ChartData<"line">;
-  weeklyActivity: ChartData<"bar">;
-  genreDistribution: ChartData<"bar">;
-}
-
-const defaultLineChartData: ChartData<"line", number[], unknown> = {
-  labels: [],
-  datasets: [
-    {
-      label: "No data",
-      data: [],
-      borderColor: "rgb(75, 192, 192)",
-      tension: 0.1,
-    },
-  ],
-};
-
-const defaultBarChartData: ChartData<"bar", number[], unknown> = {
-  labels: [],
-  datasets: [
-    {
-      label: "No data",
-      data: [],
-      backgroundColor: "rgba(153, 102, 255, 0.5)",
-    },
-  ],
-};
-
-const getChartData = (statData: StatData | null): ChartDataSets => {
-  if (!statData)
-    return {
-      listeningTime: defaultLineChartData,
-      artistDiversity: defaultBarChartData,
-      timeOfDay: defaultLineChartData,
-      weeklyActivity: defaultBarChartData,
-      genreDistribution: defaultBarChartData,
-    };
-
-  return {
-    listeningTime: {
-      labels: statData.dailyStats.map((stat) =>
-        new Date(stat.date).toLocaleDateString("en-US", { weekday: "short" })
-      ),
-      datasets: [
-        {
-          label: "Hours Listened",
-          data: statData.dailyStats.map(
-            (stat) => stat.total_duration / 3600000
-          ),
-          borderColor: "rgb(75, 192, 192)",
-          backgroundColor: "rgba(75, 192, 192, 0.2)",
-          fill: true,
-          tension: 0.4,
-        },
-      ],
-    },
-
-    timeOfDay: {
-      labels: statData.timeDistribution.map((t) => `${t.hour}:00`),
-      datasets: [
-        {
-          label: "Track Plays",
-          data: statData.timeDistribution.map((t) => t.count),
-          borderColor: "rgb(75, 192, 192)",
-          backgroundColor: "rgba(75, 192, 192, 0.2)",
-          fill: true,
-          tension: 0.4,
-        },
-      ],
-    },
-
-    artistDiversity: {
-      labels: statData.topArtists.map((a) => a.artist_name),
-      datasets: [
-        {
-          label: "Plays",
-          data: statData.topArtists.map((a) => a.play_count),
-          backgroundColor: "rgba(153, 102, 255, 0.5)",
-        },
-      ],
-    },
-
-    weeklyActivity: {
-      labels: statData.dailyStats.map((stat) =>
-        new Date(stat.date).toLocaleDateString("en-US", { weekday: "short" })
-      ),
-      datasets: [
-        {
-          label: "Unique Tracks",
-          data: statData.dailyStats.map((stat) => stat.track_count),
-          backgroundColor: "rgba(153, 102, 255, 0.5)",
-        },
-      ],
-    },
-
-    genreDistribution: {
-      labels: statData.topGenres.map((g) => g.genre),
-      datasets: [
-        {
-          label: "Track Count",
-          data: statData.topGenres.map((g) => g.count),
-          backgroundColor: "rgba(153, 102, 255, 0.5)",
-        },
-      ],
-    },
-  } as ChartDataSets;
-};
 
 const chartOptions = {
   responsive: true,
@@ -203,21 +63,42 @@ const chartOptions = {
   },
 };
 
+interface GenreData {
+  genre: string;
+  count: number;
+  percentage: number;
+}
+
 const StatsSection = () => {
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState("week");
-  const [statData, setStatData] = useState<StatData | null>(null);
+  const [genres, setGenres] = useState<GenreData[]>([]);
+  const [stats, setStats] = useState<OverviewPageStatisticsInterface>({
+    totalTracks: 0,
+    uniqueTracks: 0,
+    uniqueArtists: 0,
+    totalDuration: 0,
+    averageTrackDuration: 0,
+    dailyAverage: {
+      tracks: 0,
+      duration: 0,
+    },
+  });
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/listening-stats?timeRange=${timeRange}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch stats");
-        const data = await response.json();
-        setStatData(data);
+        const [overviewData, genreData] = await Promise.all([
+          fetchOverviewStats(),
+          fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/genres`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }).then((res) => res.json()),
+        ]);
+
+        setStats(overviewData);
+        setGenres(genreData);
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
@@ -225,10 +106,18 @@ const StatsSection = () => {
       }
     };
 
-    fetchStats();
-  }, [timeRange]);
+    fetchData();
+  }, []);
 
-  const chartData = getChartData(statData);
+  const genreChartData = {
+    labels: genres.map((g) => g.genre),
+    datasets: [
+      {
+        data: genres.map((g) => g.count),
+        backgroundColor: "rgba(153, 102, 255, 0.5)",
+      },
+    ],
+  };
 
   if (loading) {
     return (
@@ -241,76 +130,102 @@ const StatsSection = () => {
   }
 
   return (
-    <Card className="bg-white/[0.03] border-white/10">
+    <Card className="bg-white/[0.03] border-white/10 lg:mt-0 md:mt-16 sm:mt-16">
       <CardContent className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-            Listening Statistics
-          </h2>
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Last Week</SelectItem>
-              <SelectItem value="month">Last Month</SelectItem>
-              <SelectItem value="year">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <h2 className="text-2xl font-bold text-white mb-6">
+          Listening Statistics
+        </h2>
 
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="grid grid-cols-3 gap-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="patterns">Patterns</TabsTrigger>
             <TabsTrigger value="genres">Genres</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Overview */}
               <Card className="bg-white/[0.02] border-white/5">
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <p className="text-sm text-zinc-400">Total Tracks</p>
-                      <p className="text-2xl font-bold">
-                        {statData?.overview?.totalTracks || 0}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-zinc-400">Unique Artists</p>
-                      <p className="text-2xl font-bold">
-                        {statData?.overview?.uniqueArtists || 0}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-zinc-400">Hours Listened</p>
-                      <p className="text-2xl font-bold">
-                        {Math.round(
-                          (statData?.overview?.totalDuration || 0) / 3600000
-                        )}
-                        h
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-zinc-400">Skip Rate</p>
-                      <p className="text-2xl font-bold">
-                        {Math.round(statData?.overview?.skipRate || 0)}%
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/[0.02] border-white/5">
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-medium mb-2">
-                    Listening Patterns
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Listening Activity
                   </h3>
-                  <div className="h-[300px]">
-                    <Line
-                      data={chartData.listeningTime}
-                      options={chartOptions}
+                  <div className="space-y-3">
+                    <StatItem
+                      label="Total Tracks"
+                      value={stats.totalTracks.toLocaleString()}
+                    />
+                    <StatItem
+                      label="Unique Tracks"
+                      value={stats.uniqueTracks.toLocaleString()}
+                      percentage={(
+                        (stats.uniqueTracks / stats.totalTracks) *
+                        100
+                      ).toFixed(1)}
+                    />
+                    <StatItem
+                      label="Unique Artists"
+                      value={stats.uniqueArtists.toLocaleString()}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Time Stats */}
+              <Card className="bg-white/[0.02] border-white/5">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Time Stats
+                  </h3>
+                  <div className="space-y-3">
+                    <StatItem
+                      label="Total Hours"
+                      value={`${Math.round(stats.totalDuration / 3600000)}h`}
+                    />
+                    <StatItem
+                      label="Daily Average"
+                      value={`${Math.round(
+                        stats.dailyAverage.duration / 3600000
+                      )}h`}
+                      subtext={`${stats.dailyAverage.tracks} tracks/day`}
+                    />
+                    <StatItem
+                      label="Avg. Track Length"
+                      value={`${Math.round(
+                        stats.averageTrackDuration / 1000 / 60
+                      )}min`}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Engagement Stats */}
+              <Card className="bg-white/[0.02] border-white/5">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Engagement
+                  </h3>
+                  <div className="space-y-3">
+                    <StatItem
+                      label="Daily Activity Score"
+                      value={`${Math.round(
+                        (stats.dailyAverage.tracks / 24) * 100
+                      )}%`}
+                      subtext="Based on hourly activity"
+                    />
+                    <StatItem
+                      label="Genre Diversity"
+                      value={`${genres.length} genres`}
+                      subtext={`Top: ${genres[0]?.genre || "N/A"}`}
+                    />
+                    <StatItem
+                      label="Artist Rotation"
+                      value={`${(
+                        (stats.uniqueArtists / stats.totalTracks) *
+                        100
+                      ).toFixed(1)}%`}
+                      subtext="Artist variety score"
                     />
                   </div>
                 </CardContent>
@@ -318,43 +233,123 @@ const StatsSection = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="patterns" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="bg-white/[0.02] border-white/5">
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-medium mb-2">Time of Day</h3>
-                  <div className="h-[300px]">
-                    <Line data={chartData.timeOfDay} options={chartOptions} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/[0.02] border-white/5">
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-medium mb-2">Weekly Activity</h3>
-                  <div className="h-[300px]">
-                    <Bar
-                      data={chartData.weeklyActivity}
-                      options={chartOptions}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="genres" className="space-y-4">
+          {/* Genres Section */}
+          <TabsContent value="genres">
             <div className="grid grid-cols-1 gap-4">
               <Card className="bg-white/[0.02] border-white/5">
                 <CardContent className="p-4">
-                  <h3 className="text-sm font-medium mb-2">Top Genres</h3>
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Top Genres
+                  </h3>
                   <div className="h-[400px]">
                     <Bar
-                      data={chartData.genreDistribution}
+                      data={genreChartData}
                       options={{
                         ...chartOptions,
                         indexAxis: "y" as const,
+                        plugins: {
+                          ...chartOptions.plugins,
+                          legend: {
+                            display: false,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: (context) => {
+                                const genre = genres[context.dataIndex];
+                                return `${
+                                  genre.count
+                                } plays (${genre.percentage.toFixed(1)}%)`;
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          x: {
+                            grid: {
+                              color: "rgba(255, 255, 255, 0.1)",
+                            },
+                            ticks: {
+                              color: "rgba(255, 255, 255, 0.7)",
+                            },
+                          },
+                          y: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              color: "rgba(255, 255, 255, 0.9)",
+                              font: {
+                                size: 12,
+                              },
+                            },
+                          },
+                        },
                       }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Insights Tab */}
+          <TabsContent value="insights" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-white/[0.02] border-white/5">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Listening Patterns
+                  </h3>
+                  <div className="space-y-3">
+                    <StatItem
+                      label="Peak Listening Time"
+                      value={`${Math.round(
+                        stats.dailyAverage.duration / 3600000
+                      )}h/day`}
+                    />
+                    <StatItem
+                      label="Track Completion Rate"
+                      value={`${(
+                        (stats.totalDuration /
+                          (stats.totalTracks * stats.averageTrackDuration)) *
+                        100
+                      ).toFixed(1)}%`}
+                    />
+                    <StatItem
+                      label="Genre Focus"
+                      value={`${(genres[0]?.percentage || 0).toFixed(1)}%`}
+                      subtext="Top genre dominance"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/[0.02] border-white/5">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-medium text-white mb-4">
+                    Compare to Average
+                  </h3>
+                  <div className="space-y-3">
+                    <StatItem
+                      label="Listening Time"
+                      value={
+                        stats.dailyAverage.duration > 7200000
+                          ? "Above Average"
+                          : "Below Average"
+                      }
+                      subtext={`${Math.round(
+                        stats.dailyAverage.duration / 3600000
+                      )}h vs 2h avg`}
+                    />
+                    <StatItem
+                      label="Track Variety"
+                      value={stats.uniqueTracks > 100 ? "High" : "Moderate"}
+                      subtext={`${stats.uniqueTracks} unique tracks`}
+                    />
+                    <StatItem
+                      label="Genre Exploration"
+                      value={genres.length > 5 ? "Explorer" : "Focused"}
+                      subtext={`${genres.length} genres explored`}
                     />
                   </div>
                 </CardContent>
@@ -366,5 +361,20 @@ const StatsSection = () => {
     </Card>
   );
 };
+
+const StatItem = ({ label, value, percentage, subtext }: StatItemProps) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <span className="text-zinc-400">{label}</span>
+      {subtext && <p className="text-xs text-zinc-500">{subtext}</p>}
+    </div>
+    <div className="text-right">
+      <span className="text-white font-medium">{value}</span>
+      {percentage && (
+        <span className="text-xs text-zinc-500 ml-1">({percentage}%)</span>
+      )}
+    </div>
+  </div>
+);
 
 export default StatsSection;

@@ -201,18 +201,18 @@ model TrackPlay {
   timestamp DateTime @default(now()) @db.Timestamptz
 
   // Track metadata
-  trackName   String
-  artistIds   String[]
-  artistNames String[]
-  albumName   String
-  durationMs  Int      @map("duration_ms")
-  popularity  Int?
-
+  trackName        String
+  artistIds        String[]
+  artistNames      String[]
+  albumName        String
+  durationMs       Int      @map("duration_ms")
+  popularity       Int?
+  playCount        Int      @default(1)
   // Context
-  contextType      String? @map("context_type")
-  contextUri       String? @map("context_uri")
-  playedDurationMs Int?    @map("played_duration_ms")
-  skipped          Boolean @default(false)
+  contextType      String?  @map("context_type")
+  contextUri       String?  @map("context_uri")
+  playedDurationMs Int?     @map("played_duration_ms")
+  skipped          Boolean  @default(false)
 
   @@index([userId, timestamp(sort: Desc)])
   @@index([timestamp(sort: Desc)])

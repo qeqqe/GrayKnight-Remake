@@ -21,6 +21,7 @@ interface OverviewProps {
 
 export function Overview({ currentTrack }: OverviewProps) {
   const [totalTrackLength, setTotalTrackLength] = useState<number>(0);
+  const [totalDuration, setTotalDuration] = useState<number>(0);
   const [topGenre, setTopGenre] = useState<string>("N/A");
   const [offlineTrackingEnabled, setOfflineTrackingEnabled] = useState(false);
   const router = useRouter();
@@ -28,8 +29,21 @@ export function Overview({ currentTrack }: OverviewProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const totalTracks = await fetchTotalTracks();
-        setTotalTrackLength(totalTracks?._sum?.playCount || 0);
+        // Fetch both total tracks and actual listening time
+        const [totalTracksData, statsData] = await Promise.all([
+          fetchTotalTracks(),
+          fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/stats-spotify/overview`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          ).then((res) => res.json()),
+        ]);
+
+        setTotalTrackLength(totalTracksData?._sum?.playCount || 0);
+        setTotalDuration(statsData?.totalDuration || 0);
       } catch (error) {
         console.error("Error fetching track data:", error);
       }
@@ -80,7 +94,7 @@ export function Overview({ currentTrack }: OverviewProps) {
       },
       {
         label: "Listening Time",
-        value: `${Math.round((totalTrackLength * 3) / 60)}h`, // Rough estimate of listening time
+        value: `${Math.round(totalDuration / 3600000)}h`, // Convert ms to hours
         icon: <Clock className="w-5 h-5" />,
       },
       {
@@ -89,7 +103,7 @@ export function Overview({ currentTrack }: OverviewProps) {
         icon: <BarChart3 className="w-5 h-5" />,
       },
     ],
-    [totalTrackLength, topGenre]
+    [totalTrackLength, totalDuration, topGenre]
   );
 
   const offlineTrackingToggle = (
