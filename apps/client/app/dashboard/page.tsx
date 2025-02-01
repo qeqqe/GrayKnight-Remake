@@ -192,9 +192,9 @@ const Page = () => {
           <h2 className="font-semibold text-white truncate">
             {user.displayName || "Loading..."}
           </h2>
-          <p className="text-sm text-zinc-400 truncate">
+          {/* <p className="text-sm text-zinc-400 truncate">
             {user.email || "Please sign in"}
-          </p>
+          </p> */}
         </div>
       </div>
 

@@ -1,125 +1,108 @@
-# 🎵 GrayKnight - Your Advanced Spotify Companion
+# GrayKnight - Spotify Analytics & Controller
 
-GrayKnight is a powerful Spotify companion that provides deep analytics and seamless device control, enriched with real-time tracking and advanced caching mechanisms.
+A web application that enhances your Spotify experience with detailed listening statistics and advanced playback controls.
 
-## ✨ Key Features
+[Welcome Page Screenshot]
 
-- **Real-Time Listening Analytics**
+## Features
 
-  - Comprehensive session tracking with device context
-  - Advanced genre distribution analysis
-  - Artist interaction patterns with genre caching
-  - Time-based listening habits with TimescaleDB integration
-  - Offline tracking support
+### Live Music Control
 
-- **Smart Device Management**
+- Real-time playback controls
+- Multi-device management
+- Queue management
+- Volume and playback mode controls
 
-  - Real-time device state monitoring
-  - Cross-device playback control
-  - Intelligent volume management
-  - Multi-device synchronization
-  - Device context awareness
+![Image](https://github.com/user-attachments/assets/a3501e48-74db-454d-afa8-aefab7d88f5f)
+![Image](https://github.com/user-attachments/assets/3092ac9c-f17f-4f10-9dc5-f7206a081785)
+![Image](https://github.com/user-attachments/assets/87f0e21e-ef0b-4355-b46b-4779f99df96d)
+![Image](https://github.com/user-attachments/assets/2d3136f8-5b69-490c-8e6a-a0a246994043)
 
-- **Advanced Music Intelligence**
-  - User taste profiling
-  - Genre evolution tracking
-  - Artist loyalty metrics
-  - Discovery rate analysis
-  - Playlist analysis and insights
+### Detailed Analytics
 
-## 🚀 Technical Architecture
+- Track listening history
+- Genre distribution analysis
+- Peak listening hours
+- Time-based statistics
+- Artist diversity tracking
 
-- **Frontend Stack**
+![Image](https://github.com/user-attachments/assets/587fb86c-0962-4010-b40b-237885d84ccb)
+![Image](https://github.com/user-attachments/assets/de58f1a8-8bc1-4a1e-a345-6ffac9a5877c)
+![Image](https://github.com/user-attachments/assets/5b3a7ae0-0e38-455d-bf33-6bea02db36da)
 
-  - Next.js with TypeScript
-  - Real-time state management
-  - Responsive Tailwind design
-  - ShadCN UI components
-  - Custom animations with React Bits
+### Library Management
 
-- **Backend Infrastructure**
+- User Top items
+- User's playlist and dialogs
 
-  - NestJS REST API
-  - PostgreSQL with Prisma ORM
-  - TimescaleDB for time-series data
-  - Redis caching layer
-  - Spotify Web API integration
+![Image](https://github.com/user-attachments/assets/975fc34e-3977-4baf-84c3-c1dcd5e1ec0a)
 
-- **Data Processing**
-  - Real-time event processing
-  - Efficient data aggregation
-  - Time-series analytics
-  - Genre caching system
-  - Listening pattern analysis
+### Smart Features
 
-## 📊 Advanced Analytics
+- Offline tracking capability
+- Background scrobbling
+- Cross-device synchronization
+- Listening pattern analysis
+- ![Image](https://github.com/user-attachments/assets/3829d9bd-b172-48bf-937a-66237d39ede8)
 
-- **Listening Patterns**
+## Technical Details
 
-  - Time-based activity heatmaps
-  - Genre distribution over time
-  - Artist interaction frequency
-  - Track discovery patterns
-  - Session duration analysis
+### Frontend
 
-- **Music Intelligence**
-  - Genre affinity scoring
-  - Artist loyalty tracking
-  - Music mood analysis
-  - Playlist evolution insights
-  - Listening context awareness
+- Built with Next.js and Ts
+- Responsive design with Tailwind CSS
+- Clean and consitent UI.
 
-## 🔐 Data Management
+### Backend
 
-- **Caching Strategy**
+- NestJS
+- PSQL with Prisma
+- Efficient caching system (almost done)
+- Spotify Web API integration
 
-  - Redis for hot data
-  - Artist genre caching
-  - Device state caching
-  - Playlist metadata caching
-  - API response optimization
+### Key Components
 
-- **Time-Series Data**
-  - TimescaleDB integration
-  - Historical trend analysis
-  - Performance metrics
-  - Listening patterns
-  - Activity aggregation
+- User authentication and session management
+- Real-time track scrobbling
+- Artist genre caching
+- Time-series data tracking
+- Device state management
 
-## 🛠️ System Architecture
+## Setup Guide
 
-- **Data Flow**
+### Prerequisites
 
-  - Real-time event processing
-  - Efficient data aggregation
-  - Caching mechanisms
-  - Time-series storage
-  - Analytics pipeline
+- Node.js (v16 or higher)
+- PostgreSQL database
 
-- **Performance Optimization**
-  - Query optimization
-  - Efficient data structures
-  - Intelligent caching
-  - Background processing
-  - API response compression
+### Installation Steps
 
-## 🔄 Continuous Development
+1. **Clone the Repository**
 
-- **Upcoming Features**
-  - Advanced recommendation engine
-  - Social listening features
-  - Extended offline support
-  - Enhanced visualizations
-  - AI-powered insights
+```bash
+git clone https://github.com/qeqqe/GrayKnight-Remake.git
+cd GrayKnight-Remake
+```
 
-## 🤝 Contributing
+2. **Install Dependencies**
 
-We welcome contributions! Check our issues page for current tasks or suggest new features.
+```bash
+pnpm install
+```
 
-## 📝 License
+3. **Environment Configuration**
 
-[MIT License](LICENSE)
+- Copy `.env.example` to `.env` in both apps/client and apps/server
+- Fill in required environment variables
 
----
+4. **Start Development Servers**
 
-<p align="center">Made with ♥️ for music lovers</p>
+```bash
+# Start Frontend (from apps/client)
+cd apps/client
+pnpm run dev
+
+# Start Backend (from apps/server)
+cd apps/server
+pnpm run start:dev
+```
