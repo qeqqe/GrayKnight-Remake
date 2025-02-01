@@ -198,7 +198,7 @@ model TrackPlay {
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   trackId   String
-  timestamp DateTime @default(now())
+  timestamp DateTime @default(now()) @db.Timestamptz
 
   // Track metadata
   trackName   String

@@ -45,10 +45,32 @@ export default function AvailableDevices() {
 
       if (!response.ok) throw new Error("Failed to fetch devices");
       const data = await response.json();
-      setDevices(data.devices);
+
+      // Ensure devices is always an array
+      const deviceList = data.devices || [];
+
+      // Get current track to double-check active device
+      const currentTrack = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/spotify/current-playing`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      ).then((res) => res.json());
+
+      // Update active status based on current playback
+      const updatedDevices = deviceList.map(
+        (device: { is_active: boolean; id: string }) => ({
+          ...device,
+          is_active: currentTrack?.device?.id === device.id || device.is_active,
+        })
+      );
+
+      setDevices(updatedDevices);
 
       // Store active device in local storage
-      const activeDevice = data.devices.find(
+      const activeDevice = updatedDevices.find(
         (device: SpotifyDevice) => device.is_active
       );
       if (activeDevice) {
@@ -82,17 +104,28 @@ export default function AvailableDevices() {
         throw new Error(error.message || "Failed to transfer playback");
       }
 
-      // refresh devices after successful transfer
+      // Update immediately to show the transfer
+      setDevices((prev) =>
+        prev.map((device) => ({
+          ...device,
+          is_active: device.id === deviceId,
+        }))
+      );
+
+      // Refresh devices after a short delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await fetchDevices();
 
-      // additional refresh after delay to ensure state is up to date
-      setTimeout(async () => {
-        await fetchDevices();
+      // One final refresh to ensure state is accurate
+      setTimeout(() => {
+        fetchDevices();
         setTransferring(null);
-      }, 20000);
+      }, 5000);
     } catch (error) {
       console.error("Failed to transfer playback:", error);
       setTransferring(null);
+      // Refresh devices to show current state
+      fetchDevices();
     }
   };
 

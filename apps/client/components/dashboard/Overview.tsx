@@ -5,7 +5,6 @@ import { spotifyTrack } from "@/lib/types";
 import { CurrentlyPlaying } from "@/app/(components)/CurrentlyPlaying";
 import SplitText from "@/src/reactbits/TextAnimations/SplitText/SplitText";
 import { useEffect, useState, useMemo } from "react";
-import { TrackPlayInterface } from "@/lib/types/index";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import QueueSection from "@/app/(components)/QueueSection";
@@ -22,10 +21,6 @@ interface OverviewProps {
 
 export function Overview({ currentTrack }: OverviewProps) {
   const [totalTrackLength, setTotalTrackLength] = useState<number>(0);
-  const [listeningData, setListeningData] = useState<
-    TrackPlayInterface[] | null
-  >(null);
-  const [totalTime, setTotalTime] = useState<number>(0);
   const [topGenre, setTopGenre] = useState<string>("N/A");
   const [offlineTrackingEnabled, setOfflineTrackingEnabled] = useState(false);
   const router = useRouter();
@@ -33,8 +28,8 @@ export function Overview({ currentTrack }: OverviewProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await fetchTotalTracks();
-        setListeningData(data);
+        const totalTracks = await fetchTotalTracks();
+        setTotalTrackLength(totalTracks?._sum?.playCount || 0);
       } catch (error) {
         console.error("Error fetching track data:", error);
       }
@@ -67,22 +62,6 @@ export function Overview({ currentTrack }: OverviewProps) {
     checkOfflineTracking();
   }, []);
 
-  useMemo(() => {
-    if (listeningData) {
-      setTotalTrackLength(listeningData.length);
-
-      const totalMs = listeningData.reduce(
-        (acc: number, track: TrackPlayInterface) => {
-          return acc + (track.durationMs || 0);
-        },
-        0
-      );
-
-      const totalHours = Math.round(totalMs / (1000 * 60 * 60));
-      setTotalTime(totalHours);
-    }
-  }, [listeningData]);
-
   const handleOfflineTrackingToggle = async () => {
     try {
       await toggleOfflineTracking(!offlineTrackingEnabled);
@@ -101,7 +80,7 @@ export function Overview({ currentTrack }: OverviewProps) {
       },
       {
         label: "Listening Time",
-        value: `${totalTime}h`,
+        value: `${Math.round((totalTrackLength * 3) / 60)}h`, // Rough estimate of listening time
         icon: <Clock className="w-5 h-5" />,
       },
       {
@@ -110,7 +89,7 @@ export function Overview({ currentTrack }: OverviewProps) {
         icon: <BarChart3 className="w-5 h-5" />,
       },
     ],
-    [totalTrackLength, totalTime, topGenre]
+    [totalTrackLength, topGenre]
   );
 
   const offlineTrackingToggle = (

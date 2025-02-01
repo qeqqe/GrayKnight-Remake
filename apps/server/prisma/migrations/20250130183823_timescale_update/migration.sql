@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "TrackPlay" ALTER COLUMN "timestamp" SET DATA TYPE TIMESTAMPTZ;

@@ -90,7 +90,7 @@ const SearchSection = () => {
   };
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full ">
       {/* Search Header */}
       <CardContent className="p-4 lg:p-6">
         <h2 className="text-xl lg:text-2xl font-bold mb-4 text-zinc-200">

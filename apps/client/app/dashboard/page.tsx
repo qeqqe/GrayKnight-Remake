@@ -301,7 +301,7 @@ const Page = () => {
                   <Overview currentTrack={currentTrack} />
                 </TabsContent>
                 <TabsContent value="search" className="mt-0 w-full">
-                  <Card className="bg-white/[0.03] border-white/10 w-full">
+                  <Card className="bg-white/[0.03] border-white/10 w-full  lg:mt-0 md:mt-16 sm:mt-16">
                     <SearchSection />
                   </Card>
                 </TabsContent>
@@ -309,7 +309,7 @@ const Page = () => {
                   <LibraryContent />
                 </TabsContent>
                 <TabsContent value="devices" className="mt-0">
-                  <Card className="bg-white/[0.03] border-white/10">
+                  <Card className="bg-white/[0.03] border-white/10  lg:mt-0 md:mt-16 sm:mt-16">
                     <CardContent className="p-6">
                       <h2 className="text-2xl font-bold mb-4 text-zinc-300">
                         Available Devices
@@ -319,7 +319,7 @@ const Page = () => {
                   </Card>
                 </TabsContent>
                 <TabsContent value="recent" className="mt-0">
-                  <Card className="bg-white/[0.03] border-white/10">
+                  <Card className="bg-white/[0.03] border-white/10  lg:mt-0 md:mt-16 sm:mt-16">
                     <CardContent className="p-6">
                       <p className="text-xl mb-4 lg:text-2xl font-bold bg-gradient-to-r from-white to-black text-transparent  bg-clip-text ">
                         Recently Played

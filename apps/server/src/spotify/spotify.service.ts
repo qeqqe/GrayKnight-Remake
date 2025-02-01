@@ -188,12 +188,19 @@ export class SpotifyService {
       );
 
       if (!response.ok) {
+        this.logger.error(
+          `Failed to fetch devices: ${response.status} ${response.statusText}`,
+        );
         throw new UnauthorizedException('Failed to fetch available devices');
       }
 
-      return response.json();
+      const data = await response.json();
+      this.logger.log(
+        `Found ${data.devices?.length || 0} devices for user ${userId}`,
+      );
+      return data;
     } catch (error) {
-      console.error('Error fetching available devices:', error);
+      this.logger.error('Error fetching available devices:', error);
       throw error;
     }
   }
@@ -210,17 +217,32 @@ export class SpotifyService {
         },
         body: JSON.stringify({
           device_ids: [deviceId],
-          play: true, // this ensures playback continues on the new device
+          play: true,
         }),
       });
 
+      if (response.status === 404) {
+        this.logger.warn(`Device ${deviceId} not found or not available`);
+        throw new UnauthorizedException('Device not found or not available');
+      }
+
       if (response.status !== 204) {
+        this.logger.error(
+          `Failed to transfer playback: ${response.status} ${response.statusText}`,
+        );
         throw new UnauthorizedException('Failed to transfer playback');
       }
 
-      return { success: true };
+      // Wait a moment and fetch current player state to confirm transfer
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const playerState = await this.getCurrentTrack(userId);
+
+      return {
+        success: true,
+        activeDevice: playerState?.device?.id === deviceId,
+      };
     } catch (error) {
-      console.error('Error transferring playback:', error);
+      this.logger.error('Error transferring playback:', error);
       throw error;
     }
   }

@@ -25,13 +25,11 @@ export class OverviewSpotifyService {
 
   async totalTracks(userID: string) {
     try {
-      const response = await this.prisma.trackPlay.findMany({
+      const response = await this.prisma.artistGenreCache.aggregate({
         where: {
           userId: userID,
         },
-        orderBy: {
-          timestamp: 'desc',
-        },
+        _sum: { playCount: true },
       });
       this.logger.log(`Got the response: ${response}`);
       return response;

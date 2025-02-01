@@ -6,7 +6,8 @@
     "prepare": "husky install",
     "lint:all": "npm run lint:client && npm run lint:server",
     "lint:client": "cd apps/client && npm run lint",
-    "lint:server": "cd apps/server && npm run lint"
+    "lint:server": "cd apps/server && npm run lint",
+    "timescale": "docker run -d --name timescaledb_grayknight -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=test -e POSTGRES_DB=grayknight -v timescale_data:/var/lib/postgresql/data timescale/timescaledb-ha:pg17"
   },
   "keywords": [],
   "author": "",

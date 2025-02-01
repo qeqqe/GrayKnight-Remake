@@ -11,6 +11,7 @@ import { OverviewSpotifyModule } from './overview-spotify/overview-spotify.modul
 import { SearchSpotifyModule } from './search-spotify/search-spotify.module';
 import { RecentSpotifyModule } from './recent-spotify/recent-spotify.module';
 import { LibrarySpotifyModule } from './library-spotify/library-spotify.module';
+import { StatsSpotifyModule } from './stats-spotify/stats-spotify.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LibrarySpotifyModule } from './library-spotify/library-spotify.module';
     SearchSpotifyModule,
     RecentSpotifyModule,
     LibrarySpotifyModule,
+    StatsSpotifyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
