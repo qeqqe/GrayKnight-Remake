@@ -1,15 +1,31 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RedisService } from 'src/redis/redis.service';
 import { OverviewPageStatistics } from '../types/index';
 
 @Injectable()
 export class StatsSpotifyService {
   private readonly logger = new Logger(StatsSpotifyService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private redisService: RedisService,
+  ) {}
 
   async getOverviewStats(userId: string) {
-    this.logger.log(`Fetching overview stats for user ${userId}`);
+    // Try to get cached stats first
+    const cachedStats =
+      await this.redisService.getCachedStats<OverviewPageStatistics>(
+        userId,
+        'overview',
+      );
+
+    if (cachedStats) {
+      this.logger.log('Returning cached overview stats');
+      return cachedStats;
+    }
+
+    this.logger.log(`Fetching fresh overview stats for user ${userId}`);
 
     // Initialize with defaults to handle edge cases
     const overViewPageStatistics: OverviewPageStatistics = {
@@ -216,10 +232,17 @@ export class StatsSpotifyService {
       overViewPageStatistics.patterns = {
         ...overViewPageStatistics.patterns,
         peakHour: hour,
-        peakHourPercentage: percentage, // Add this to your types
+        peakHourPercentage: percentage,
       };
 
       this.logger.debug('Overview stats:', overViewPageStatistics);
+
+      // cache the results before returning
+      await this.redisService.cacheStats(
+        userId,
+        'overview',
+        overViewPageStatistics,
+      );
       return overViewPageStatistics;
     } catch (error) {
       this.logger.error('Error fetching overview stats:', error);
@@ -297,6 +320,17 @@ export class StatsSpotifyService {
 
   // Analyzes genre distribution for music preferences
   async getGenereStats(userId: string) {
+    // get cached genre stats first
+    const cachedGenres = await this.redisService.getCachedStats<any>(
+      userId,
+      'genres',
+    );
+
+    if (cachedGenres) {
+      this.logger.log('Returning cached genre stats');
+      return cachedGenres;
+    }
+
     this.logger.log(`Fetching genre stats for user ${userId}`);
 
     try {
@@ -370,6 +404,9 @@ export class StatsSpotifyService {
       }
 
       this.logger.debug('Top genres:', sortedGenres);
+
+      // cache the results before returning
+      await this.redisService.cacheStats(userId, 'genres', sortedGenres);
       return sortedGenres;
     } catch (error) {
       this.logger.error('Error fetching top genres:', error);

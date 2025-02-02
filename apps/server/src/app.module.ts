@@ -12,6 +12,7 @@ import { SearchSpotifyModule } from './search-spotify/search-spotify.module';
 import { RecentSpotifyModule } from './recent-spotify/recent-spotify.module';
 import { LibrarySpotifyModule } from './library-spotify/library-spotify.module';
 import { StatsSpotifyModule } from './stats-spotify/stats-spotify.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { StatsSpotifyModule } from './stats-spotify/stats-spotify.module';
     RecentSpotifyModule,
     LibrarySpotifyModule,
     StatsSpotifyModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

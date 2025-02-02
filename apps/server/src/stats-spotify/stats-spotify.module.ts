@@ -1,11 +1,11 @@
-import { forwardRef, Module } from '@nestjs/common';
-import { StatsSpotifyController } from './stats-spotify.controller';
+import { Module } from '@nestjs/common';
 import { StatsSpotifyService } from './stats-spotify.service';
+import { StatsSpotifyController } from './stats-spotify.controller';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { AuthModule } from 'src/auth/auth.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), PrismaModule],
+  imports: [PrismaModule, RedisModule],
   controllers: [StatsSpotifyController],
   providers: [StatsSpotifyService],
 })
