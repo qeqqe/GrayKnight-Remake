@@ -45,7 +45,22 @@ const Page = () => {
     displayName: "",
     profileUrl: "",
   });
+
+  // Change to simple initial state
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Add useEffect to handle localStorage
+  useEffect(() => {
+    const savedTab = localStorage.getItem("defaultDashboardTab");
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
+  }, []);
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    localStorage.setItem("defaultDashboardTab", newTab);
+  };
 
   const currentPlaying = useCallback(async () => {
     try {
@@ -202,7 +217,11 @@ const Page = () => {
 
       {/* Rest of the navigation */}
       <ScrollArea className="h-[calc(100vh-200px)]">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
           <TabsList className="flex flex-col w-full space-y-1 bg-transparent">
             {[
               {
@@ -294,14 +313,14 @@ const Page = () => {
             <div className="container max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
               <Tabs
                 value={activeTab}
-                onValueChange={setActiveTab}
+                onValueChange={handleTabChange}
                 className="w-full"
               >
                 <TabsContent value="overview" className="mt-0 space-y-4">
                   <Overview currentTrack={currentTrack} />
                 </TabsContent>
                 <TabsContent value="search" className="mt-0 w-full">
-                  <Card className="bg-white/[0.03] border-white/10 w-full  lg:mt-0 md:mt-16 sm:mt-16">
+                  <Card className="bg-white/[0.03] border-white/10 w-full  lg:mt-0 md:mt-16 sm:mt-16  mt-16">
                     <SearchSection />
                   </Card>
                 </TabsContent>
@@ -309,7 +328,7 @@ const Page = () => {
                   <LibraryContent />
                 </TabsContent>
                 <TabsContent value="devices" className="mt-0">
-                  <Card className="bg-white/[0.03] border-white/10  lg:mt-0 md:mt-16 sm:mt-16">
+                  <Card className="bg-white/[0.03] border-white/10 lg:mt-0 md:mt-16 sm:mt-16  mt-16">
                     <CardContent className="p-6">
                       <h2 className="text-2xl font-bold mb-4 text-zinc-300">
                         Available Devices
@@ -319,7 +338,7 @@ const Page = () => {
                   </Card>
                 </TabsContent>
                 <TabsContent value="recent" className="mt-0">
-                  <Card className="bg-white/[0.03] border-white/10  lg:mt-0 md:mt-16 sm:mt-16">
+                  <Card className="bg-white/[0.03] border-white/10  lg:mt-0 md:mt-16 sm:mt-16  mt-16">
                     <CardContent className="p-6">
                       <p className="text-xl mb-4 lg:text-2xl font-bold bg-gradient-to-r from-white to-black text-transparent  bg-clip-text ">
                         Recently Played

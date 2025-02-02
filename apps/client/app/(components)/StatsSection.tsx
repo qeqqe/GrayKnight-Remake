@@ -218,7 +218,7 @@ const StatsSection = () => {
   }
 
   return (
-    <Card className="bg-white/[0.03] border-white/10 lg:mt-0 md:mt-16 sm:mt-16">
+    <Card className="bg-white/[0.03] border-white/10 lg:mt-0 md:mt-16 sm:mt-16 mt-16">
       <CardContent className="p-6">
         <h2 className="text-2xl font-bold text-white mb-6">
           Listening Statistics

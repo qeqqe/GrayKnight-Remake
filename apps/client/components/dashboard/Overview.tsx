@@ -101,7 +101,7 @@ export function Overview({ currentTrack }: OverviewProps) {
   return (
     <div className="w-full space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:mt-0 sm:mt-16">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:mt-0 sm:mt-16  mt-16">
         {stats.map((stat, i) => (
           <div
             key={i}

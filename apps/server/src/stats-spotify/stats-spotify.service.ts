@@ -263,22 +263,26 @@ export class StatsSpotifyService {
   // Assesses user engagement through track completion
   private async calculateCompletionRate(
     stats: OverviewPageStatistics,
-    userId: string, // Add userId parameter
+    userId: string,
   ): Promise<number> {
     try {
-      if (!stats.totalTracks || !stats.averageTrackDuration) return 0;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-      // Get recent track plays for more accurate completion rate
-      const recentPlays = await this.prisma.trackPlay.findMany({
+      // Get recent track plays with more detailed aggregation
+      const recentPlays = await this.prisma.trackPlay.groupBy({
+        by: ['trackId'],
         where: {
-          userId, // Now userId is properly defined
+          userId,
           timestamp: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            gte: sevenDaysAgo,
           },
         },
-        select: {
+        _sum: {
           playedDurationMs: true,
           durationMs: true,
+          playCount: true,
+        },
+        _count: {
           skipped: true,
         },
       });
@@ -287,31 +291,42 @@ export class StatsSpotifyService {
 
       let totalActualDuration = 0;
       let totalExpectedDuration = 0;
-      let skippedTracks = 0;
+      let totalSkips = 0;
+      let totalPlays = 0;
 
       recentPlays.forEach((play) => {
-        if (play.skipped) {
-          skippedTracks++;
-        }
-
-        if (play.playedDurationMs && play.durationMs) {
-          totalActualDuration += play.playedDurationMs;
-          totalExpectedDuration += play.durationMs;
+        if (play._sum.playedDurationMs && play._sum.durationMs) {
+          totalActualDuration += play._sum.playedDurationMs;
+          totalExpectedDuration += play._sum.durationMs;
+          totalSkips += play._count.skipped || 0;
+          totalPlays += play._sum.playCount || 0;
         }
       });
 
-      // Adjust completion rate based on skip ratio
-      const skipRatio = skippedTracks / recentPlays.length;
+      // Calculate skip ratio based on total plays
+      const skipRatio = totalPlays > 0 ? totalSkips / totalPlays : 0;
+
+      // Base completion rate from actual vs expected duration
       const baseCompletionRate =
         totalExpectedDuration > 0
           ? (totalActualDuration / totalExpectedDuration) * 100
           : 0;
 
-      // Apply penalties for excessive skipping
-      const adjustedCompletionRate = baseCompletionRate * (1 - skipRatio * 0.5);
+      // Apply graduated penalties for skipping
+      let skipPenalty = 0;
+      if (skipRatio > 0.1) {
+        // Only apply penalty if skip ratio is above 10%
+        skipPenalty = Math.min(skipRatio * 15, 30); // Max 30% penalty for excessive skipping
+      }
+
+      // Calculate final rate with skip penalty
+      const adjustedCompletionRate = Math.max(
+        baseCompletionRate - skipPenalty,
+        0,
+      );
 
       // Ensure rate is between 0 and 100
-      return Math.min(Math.max(adjustedCompletionRate, 0), 100);
+      return Math.min(adjustedCompletionRate, 100);
     } catch (error) {
       this.logger.error('Error calculating completion rate:', error);
       return 0;
