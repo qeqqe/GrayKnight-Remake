@@ -176,7 +176,10 @@ export class StatsSpotifyService {
         peakHour:
           (await this.calculatePeakHour(userId, twentyFourHoursAgo)).hour || 0,
         genreDiversity: await this.calculateGenreDiversity(userId),
-        completionRate: this.calculateCompletionRate(overViewPageStatistics),
+        completionRate: +this.calculateCompletionRate(
+          overViewPageStatistics,
+          userId,
+        ),
         listeningStyle: {
           type: 'Balanced',
           description: '',
@@ -235,18 +238,57 @@ export class StatsSpotifyService {
   }
 
   // Assesses user engagement through track completion
-  private calculateCompletionRate(stats: OverviewPageStatistics): number {
+  private async calculateCompletionRate(
+    stats: OverviewPageStatistics,
+    userId: string, // Add userId parameter
+  ): Promise<number> {
     try {
-      // Calculate completion rate based on actual played duration vs total possible duration
       if (!stats.totalTracks || !stats.averageTrackDuration) return 0;
 
-      const completionRate =
-        (stats.totalDuration /
-          (stats.totalTracks * stats.averageTrackDuration)) *
-        100;
+      // Get recent track plays for more accurate completion rate
+      const recentPlays = await this.prisma.trackPlay.findMany({
+        where: {
+          userId, // Now userId is properly defined
+          timestamp: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+        select: {
+          playedDurationMs: true,
+          durationMs: true,
+          skipped: true,
+        },
+      });
 
-      // Cap at 100% and ensure it's not negative
-      return Math.min(Math.max(completionRate, 0), 100);
+      if (recentPlays.length === 0) return 0;
+
+      let totalActualDuration = 0;
+      let totalExpectedDuration = 0;
+      let skippedTracks = 0;
+
+      recentPlays.forEach((play) => {
+        if (play.skipped) {
+          skippedTracks++;
+        }
+
+        if (play.playedDurationMs && play.durationMs) {
+          totalActualDuration += play.playedDurationMs;
+          totalExpectedDuration += play.durationMs;
+        }
+      });
+
+      // Adjust completion rate based on skip ratio
+      const skipRatio = skippedTracks / recentPlays.length;
+      const baseCompletionRate =
+        totalExpectedDuration > 0
+          ? (totalActualDuration / totalExpectedDuration) * 100
+          : 0;
+
+      // Apply penalties for excessive skipping
+      const adjustedCompletionRate = baseCompletionRate * (1 - skipRatio * 0.5);
+
+      // Ensure rate is between 0 and 100
+      return Math.min(Math.max(adjustedCompletionRate, 0), 100);
     } catch (error) {
       this.logger.error('Error calculating completion rate:', error);
       return 0;
@@ -375,68 +417,147 @@ export class StatsSpotifyService {
     userId: string,
     stats: OverviewPageStatistics,
   ): Promise<void> {
-    // Calculate discovery rate (unique tracks / total tracks in period)
-    const discoveryRate = (stats.uniqueTracks / stats.totalTracks) * 100;
+    try {
+      // Calculate discovery rate with minimum play threshold
+      const minPlaysForDiscovery = 10;
+      const discoveryRate =
+        stats.totalTracks >= minPlaysForDiscovery
+          ? (stats.uniqueTracks / stats.totalTracks) * 100
+          : 50; // Default to 50% for new users
 
-    // Determine listening style
-    const genreCount = stats.patterns.genreDiversity.total;
-    const listeningStyle = this.determineListeningStyle(
-      stats.uniqueTracks,
-      stats.totalTracks,
-      genreCount,
-    );
+      // Enhanced listening style determination
+      const genreCount = stats.patterns.genreDiversity.total;
+      const repeatRate = stats.totalTracks / Math.max(stats.uniqueTracks, 1);
+      const artistRate = stats.uniqueArtists / Math.max(stats.uniqueTracks, 1);
 
-    // Calculate artist variety
-    const artistVariety = this.calculateArtistVariety(
-      stats.uniqueArtists,
-      stats.totalTracks,
-    );
+      let listeningStyle: {
+        type: 'Explorer' | 'Specialist' | 'Balanced';
+        description: string;
+      } = {
+        type: 'Balanced',
+        description: 'You mix favorites with new discoveries',
+      };
 
-    // Update the patterns object
-    stats.patterns = {
-      ...stats.patterns,
-      discoveryRate,
-      listeningStyle,
-      artistVariety,
-    };
+      if (stats.totalTracks < minPlaysForDiscovery) {
+        listeningStyle = {
+          type: 'Explorer',
+          description: 'Starting your musical journey',
+        };
+      } else if (repeatRate > 3 && artistRate < 0.3) {
+        listeningStyle = {
+          type: 'Specialist',
+          description: 'You have strong favorites you love returning to',
+        };
+      } else if (repeatRate < 1.5 && genreCount > 5) {
+        listeningStyle = {
+          type: 'Explorer',
+          description: 'You actively seek out new music across genres',
+        };
+      }
+
+      // Enhanced artist variety calculation
+      const varietyScore = this.calculateArtistVarietyScore(
+        stats.uniqueArtists,
+        stats.totalTracks,
+        stats.patterns.genreDiversity.total,
+      );
+
+      stats.patterns = {
+        ...stats.patterns,
+        discoveryRate,
+        listeningStyle,
+        artistVariety: {
+          score: varietyScore,
+          level: this.getVarietyLevel(varietyScore),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error enhancing pattern analysis:', error);
+    }
+  }
+
+  private calculateArtistVarietyScore(
+    uniqueArtists: number,
+    totalTracks: number,
+    genreCount: number,
+  ): number {
+    if (totalTracks === 0) return 0;
+
+    const baseScore = (uniqueArtists / totalTracks) * 100;
+    const genreBonus = Math.min((genreCount / 10) * 20, 20); // up to 20% bonus for genre diversity
+
+    return Math.min(baseScore + genreBonus, 100);
+  }
+
+  private getVarietyLevel(score: number): 'High' | 'Medium' | 'Low' {
+    if (score >= 70) return 'High';
+    if (score >= 40) return 'Medium';
+    return 'Low';
   }
 
   private async calculatePeakHour(
     userId: string,
     since: Date,
   ): Promise<{ hour: number; percentage: number }> {
-    // Group by hour and count tracks
-    const hourlyPlays = await this.prisma.trackPlay.groupBy({
-      by: ['timestamp'],
-      where: {
-        userId,
-        timestamp: {
-          gte: since,
+    try {
+      // get all plays with timestamps
+      const plays = await this.prisma.trackPlay.findMany({
+        where: {
+          userId,
+          timestamp: {
+            gte: since,
+          },
         },
-      },
-      _count: true,
-    });
+        select: {
+          timestamp: true,
+          playCount: true,
+          durationMs: true,
+        },
+      });
 
-    // Create 24-hour distribution
-    const hourDistribution = new Array(24).fill(0);
-    hourlyPlays.forEach((play) => {
-      const hour = new Date(play.timestamp).getHours();
-      hourDistribution[hour] += play._count;
-    });
+      if (plays.length === 0) {
+        return { hour: 0, percentage: 0 };
+      }
 
-    // Find peak hour and calculate percentage
-    const totalPlays = hourDistribution.reduce((sum, count) => sum + count, 0);
-    const peakHour = hourDistribution.reduce(
-      (max, count, hour) => (count > hourDistribution[max] ? hour : max),
-      0,
-    );
-    const peakPercentage = totalPlays
-      ? (hourDistribution[peakHour] / totalPlays) * 100
-      : 0;
+      // initialize 24-hour distribution with weighted scores
+      const hourDistribution = new Array(24).fill(0);
+      let totalWeight = 0;
 
-    return {
-      hour: peakHour,
-      percentage: peakPercentage,
-    };
+      plays.forEach((play) => {
+        const hour = new Date(play.timestamp).getHours();
+        // Weight calculation based on play count and duration
+        const weight = play.playCount * (play.durationMs / (3 * 60 * 1000)); // Normalize by 3-minute standard
+        hourDistribution[hour] += weight;
+        totalWeight += weight;
+      });
+
+      // Smooth distribution to account for timezone boundaries
+      const smoothedDistribution = hourDistribution.map((count, i) => {
+        const prev = hourDistribution[(i + 23) % 24];
+        const next = hourDistribution[(i + 1) % 24];
+        return prev * 0.15 + count * 0.7 + next * 0.15;
+      });
+
+      // Find peak hour and calculate percentage
+      let peakHour = 0;
+      let maxActivity = 0;
+      smoothedDistribution.forEach((activity, hour) => {
+        if (activity > maxActivity) {
+          maxActivity = activity;
+          peakHour = hour;
+        }
+      });
+
+      const peakPercentage =
+        totalWeight > 0 ? (maxActivity / totalWeight) * 100 : 0;
+
+      return {
+        hour: peakHour,
+        percentage: Math.min(Math.round(peakPercentage), 100),
+      };
+    } catch (error) {
+      this.logger.error('Error calculating peak hour:', error);
+      return { hour: 0, percentage: 0 };
+    }
   }
 }
